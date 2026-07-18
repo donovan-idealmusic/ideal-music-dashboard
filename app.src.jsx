@@ -85,6 +85,7 @@ const STRINGS={
     title:"Title",artistF:"Artist",clientF:"Client",priority:"Priority",deliveryDate:"Delivery date",progress:"Progress",status:"Status",
     signInSub:"Use your passkey to continue securely.",passkeyBtn:"Sign in with Passkey",faceTouch:"Face ID · Touch ID · security key",exploreDemo:"Explore the demo without signing in",verifying:"Verifying…",authed:"Authenticated",welcome:"Welcome back",chooseProfile:"Choose a profile to continue",endToEnd:"Private, anonymous & moderated by design",passkeyError:"Couldn't verify your passkey. Try again, or explore the demo.",tryAgain:"Try again",orEmail:"or",emailContinue:"Continue with email",emailPlaceholder:"you@email.com",sendLink:"Send sign-in link",checkEmail:"Check your email",checkEmailSub:"We sent a secure sign-in link to your inbox. Open it on this device to continue.",back:"Back",
     nav_myfiles:"My Files",myFilesTitle:"My Files",myFilesSub:"Your projects — view and download your files. Everything here is private to you.",downloadFiles:"Download files",preparing:"Preparing your download",driveSoon:"Your Google Drive folder will appear here once your project is set up.",noFilesYet:"No files yet.",openInvoice:"Open",created:"Created",overdue:"Overdue",invPending:"Pending & overdue",invHistory:"Paid history",invClientSub:"Your invoices — pending and overdue are shown first.",noPending:"You're all caught up — no pending invoices.",serviceType:"Service",
+    role_superadmin:"Super Admin",rd_superadmin:"Everything Admins can do — plus branding, roles and global settings.",loginScreen:"Login Screen",loginScreenSub:"Customize what visitors see on the sign-in screen. Only Super Admins can change this.",background:"Background",overlay:"Overlay",mediaUrl:"Media URL",uploadFile:"Upload file",fit:"Fit",loop:"Loop",intensity:"Intensity",speed:"Speed",opacityL:"Opacity",livePreview:"Live preview",resetDefault:"Reset to default",loginSaved:"Login screen updated",loginReset:"Reset to default.",
   },
   vi:{
     tagline:"Sản xuất âm nhạc, quản lý tinh tế.",pickRole:"Chọn vai trò để vào bản demo · 100% ẩn danh & kiểm duyệt",
@@ -266,10 +267,69 @@ const who=(p,role,t)=>role==='admin'?p.artistName:role==='artist'?t('anonClient'
 const myProjects=(role)=>role==='admin'?PROJECTS:role==='client'?PROJECTS.filter(p=>['LUNARECS','SUNSETCO'].includes(p.clientCode)):PROJECTS.filter(p=>p.artistName==='Nova Reyes');
 
 /* ===== LOGIN ===== */
+/* ===== LOGIN CONFIG (super admin customizable) ===== */
+const LOGIN_DEFAULT={bg:'gradient',gFrom:'#5e5ce6',gVia:'#0a84ff',gTo:'#ff2d55',mediaUrl:'',loop:true,fit:'cover',ov:{particles:true,grain:true,lights:true,animGradient:true,blur:false},intensity:55,speed:50,opacity:100};
+function readLoginConfig(){try{const s=localStorage.getItem('im_login_config');if(s){const p=JSON.parse(s);return Object.assign({},LOGIN_DEFAULT,p,{ov:Object.assign({},LOGIN_DEFAULT.ov,p.ov||{})});}}catch(_){}return JSON.parse(JSON.stringify(LOGIN_DEFAULT));}
+function writeLoginConfig(c){try{localStorage.setItem('im_login_config',JSON.stringify(c));}catch(_){}}
+function LoginPreview({cfg}){
+  return <div className="login lp-preview">
+    <LoginBackdrop cfg={cfg}/>
+    <div className="signwrap" style={{transform:'scale(.8)'}}>
+      <div className="signcard" style={{width:300}}>
+        <div className="brandmark" style={{width:56,height:56,borderRadius:16}}><img src="/logo-white.png" alt="" style={{width:'64%',height:'64%',objectFit:'contain'}}/></div>
+        <h1 style={{fontSize:22,marginTop:16}}>Ideal Music</h1>
+        <p className="sub" style={{fontSize:12}}>Use your passkey to continue securely.</p>
+        <div className="passkey-btn" style={{marginTop:14,pointerEvents:'none'}}>Sign in with Passkey</div>
+      </div>
+    </div>
+  </div>;
+}
+const OV_LIST=[['particles','Particles'],['grain','Grain'],['lights','Lights'],['animGradient','Animated gradient'],['blur','Blur']];
+function LoginCustomizer({toast}){
+  const{t}=useT();const[cfg,setCfg]=useState(readLoginConfig);
+  const set=(k,v)=>setCfg(c=>Object.assign({},c,{[k]:v}));
+  const setOv=(k,v)=>setCfg(c=>Object.assign({},c,{ov:Object.assign({},c.ov,{[k]:v})}));
+  const onFile=(e,kind)=>{const f=e.target.files&&e.target.files[0];if(!f)return;const url=URL.createObjectURL(f);setCfg(c=>Object.assign({},c,{bg:kind,mediaUrl:url}));};
+  const save=()=>{writeLoginConfig(cfg);toast('✓ '+t('loginSaved'));};
+  const reset=()=>{const d=JSON.parse(JSON.stringify(LOGIN_DEFAULT));setCfg(d);writeLoginConfig(d);toast(t('loginReset'));};
+  const BG=[['gradient','Default'],['customGradient','Custom gradient'],['image','Image'],['video','Video']];
+  return <div className="card solid" style={{padding:'22px 24px',marginBottom:18}}>
+    <b style={{fontSize:16,display:'flex',alignItems:'center',gap:9}}><I.bolt style={{width:18,height:18,color:'var(--accent)'}}/>{t('loginScreen')}<span className="super-badge">Super Admin</span></b>
+    <p style={{fontSize:13,color:'var(--text-2)',margin:'4px 0 16px'}}>{t('loginScreenSub')}</p>
+    <div className="lc-grid">
+      <div className="lc-controls">
+        <div className="lc-label">{t('background')}</div>
+        <div className="seg lc-seg">{BG.map(([k,l])=><button key={k} className={cfg.bg===k?'on':''} onClick={()=>set('bg',k)}>{l}</button>)}</div>
+        {cfg.bg==='customGradient'?<div className="lc-row">
+          <label className="lc-color"><span>From</span><input type="color" value={cfg.gFrom} onChange={e=>set('gFrom',e.target.value)}/></label>
+          <label className="lc-color"><span>Via</span><input type="color" value={cfg.gVia} onChange={e=>set('gVia',e.target.value)}/></label>
+          <label className="lc-color"><span>To</span><input type="color" value={cfg.gTo} onChange={e=>set('gTo',e.target.value)}/></label>
+        </div>:null}
+        {(cfg.bg==='image'||cfg.bg==='video')?<div>
+          <div className="field"><label>{t('mediaUrl')}</label><input value={cfg.mediaUrl} placeholder="https://…" onChange={e=>set('mediaUrl',e.target.value)}/></div>
+          <label className="lc-upload"><input type="file" accept={cfg.bg==='video'?'video/*':'image/*'} onChange={e=>onFile(e,cfg.bg)} style={{display:'none'}}/><I.cloud style={{width:16,height:16}}/>{t('uploadFile')}</label>
+          <div className="lc-row" style={{marginTop:10}}>
+            <label className="lc-mini"><span>{t('fit')}</span><select value={cfg.fit} onChange={e=>set('fit',e.target.value)}><option value="cover">Cover</option><option value="contain">Contain</option></select></label>
+            {cfg.bg==='video'?<label className="lc-toggle"><input type="checkbox" checked={cfg.loop} onChange={e=>set('loop',e.target.checked)}/>{t('loop')}</label>:null}
+          </div>
+        </div>:null}
+        <div className="lc-label" style={{marginTop:16}}>{t('overlay')}</div>
+        <div className="lc-chips">{OV_LIST.map(([k,l])=><button key={k} className={"lc-chip"+(cfg.ov[k]?' on':'')} onClick={()=>setOv(k,!cfg.ov[k])}>{cfg.ov[k]?<I.check style={{width:13,height:13}}/>:null}{l}</button>)}</div>
+        <div className="lc-slider"><label>{t('intensity')}<b>{cfg.intensity}%</b></label><input type="range" min="0" max="100" value={cfg.intensity} onChange={e=>set('intensity',+e.target.value)}/></div>
+        <div className="lc-slider"><label>{t('speed')}<b>{cfg.speed}%</b></label><input type="range" min="0" max="100" value={cfg.speed} onChange={e=>set('speed',+e.target.value)}/></div>
+        <div className="lc-slider"><label>{t('opacityL')}<b>{cfg.opacity}%</b></label><input type="range" min="0" max="100" value={cfg.opacity} onChange={e=>set('opacity',+e.target.value)}/></div>
+        <div style={{display:'flex',gap:10,marginTop:18}}><button className="btn" onClick={save}><I.check style={{width:15,height:15}}/>{t('saveChanges')}</button><button className="btn ghost" onClick={reset}>{t('resetDefault')}</button></div>
+      </div>
+      <div className="lc-preview-wrap"><div className="lc-preview-label">{t('livePreview')}</div><div className="lc-preview"><LoginPreview cfg={cfg}/></div></div>
+    </div>
+  </div>;
+}
+
 function Login({onPick,lang,setLang}){
   const{t}=useT();
+  const cfg=useMemo(()=>readLoginConfig(),[]);
   const [stage,setStage]=useState('signin'); // signin | verifying | done | role
-  const roles=[{id:"admin",icon:"🛠",color:"linear-gradient(135deg,#5e5ce6,#0a84ff)"},{id:"client",icon:"🎧",color:"linear-gradient(135deg,#ff2d55,#ff9f0a)"},{id:"artist",icon:"🎹",color:"linear-gradient(135deg,#34c759,#0a84ff)"}];
+  const roles=[{id:"admin",icon:"🛠",color:"linear-gradient(135deg,#5e5ce6,#0a84ff)"},{id:"client",icon:"🎧",color:"linear-gradient(135deg,#ff2d55,#ff9f0a)"},{id:"artist",icon:"🎹",color:"linear-gradient(135deg,#34c759,#0a84ff)"},{id:"superadmin",icon:"⚡",color:"linear-gradient(135deg,#1d1d1f,#5e5ce6)"}];
   const FaceID=(p)=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M4 8V6a2 2 0 012-2h2M16 4h2a2 2 0 012 2v2M20 16v2a2 2 0 01-2 2h-2M8 20H6a2 2 0 01-2-2v-2"/><path d="M9 10v1.6M15 10v1.6M12 9.4v3.6l-1.3 .8"/><path d="M9.2 15.1c.85.75 1.85 1.05 2.8 1.05s1.95-.3 2.8-1.05"/></svg>;
   async function passkey(){
     setStage('verifying');
@@ -312,7 +372,7 @@ function Login({onPick,lang,setLang}){
     setBusy(false);
   }
   return <div className="login">
-    <LoginBackdrop/>
+    <LoginBackdrop cfg={cfg}/>
     <div className="signwrap">
       <div className="signcard">
         <div className="brandmark"><img src="/logo-white.png" alt="Ideal Music" style={{width:'64%',height:'64%',objectFit:'contain'}}/></div>
@@ -804,7 +864,7 @@ function Users({toast}){
 }
 
 /* ===== SETTINGS ===== */
-function Settings({lang,setLang,theme,setTheme,toast}){
+function Settings({lang,setLang,theme,setTheme,toast,isSuper}){
   const{t}=useT();
   return <div className="view content narrow" style={{maxWidth:820}}>
     <div className="h-row"><div><h1>{t('settingsTitle')}</h1></div></div>
@@ -832,6 +892,7 @@ function Settings({lang,setLang,theme,setTheme,toast}){
       <b style={{fontSize:16,display:'flex',alignItems:'center',gap:9}}>{theme==='dark'?<I.moon style={{width:18,height:18,color:'var(--orange)'}}/>:<I.sun style={{width:18,height:18,color:'var(--orange)'}}/>}{t('appearance')}</b>
       <div className="seg" style={{marginTop:14}}><button className={theme!=='dark'?'on':''} onClick={()=>setTheme('light')}><I.sun style={{width:14,height:14,display:'inline',verticalAlign:'-2px',marginRight:6}}/>{t('lightMode')}</button><button className={theme==='dark'?'on':''} onClick={()=>setTheme('dark')}><I.moon style={{width:14,height:14,display:'inline',verticalAlign:'-2px',marginRight:6}}/>{t('darkMode')}</button></div>
     </div>
+    {isSuper?<LoginCustomizer toast={toast}/>:null}
   </div>;
 }
 
@@ -882,10 +943,11 @@ function CommandPalette({close,go,setTheme,theme,nav}){
 /* ===== APP SHELL ===== */
 
 /* ===== LOGIN BACKDROP (animated premium overlay) ===== */
-function LoginBackdrop(){
+function LoginBackdrop({cfg}){
+  cfg=cfg||LOGIN_DEFAULT;
   const ref=useRef(null);
   useEffect(()=>{
-    const c=ref.current; if(!c) return; const ctx=c.getContext('2d'); if(!ctx) return; let raf,W,H,dpr;
+    const c=ref.current; if(!c||!cfg.ov.particles) return; const ctx=c.getContext('2d'); if(!ctx) return; let raf,W,H,dpr;
     const P=[]; const N=(window.innerWidth<640)?24:46;
     function resize(){dpr=Math.min(window.devicePixelRatio||1,2);W=c.clientWidth;H=c.clientHeight;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);}
     function seed(){P.length=0;for(let i=0;i<N;i++){P.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*2+0.5,vx:(Math.random()-.5)*0.16,vy:(Math.random()-.5)*0.16,a:Math.random()*0.45+0.18});}}
@@ -894,10 +956,17 @@ function LoginBackdrop(){
     const onR=()=>{resize();seed();};window.addEventListener('resize',onR);
     return()=>{cancelAnimationFrame(raf);window.removeEventListener('resize',onR);};
   },[]);
+  const dur=(base)=>(((140-cfg.speed)/70)*base).toFixed(1)+'s';
+  const ovOp=cfg.intensity/100;
+  const lights=cfg.ov.lights||cfg.ov.animGradient;
   return <div className="login-bg" aria-hidden="true">
-    <div className="aurora a1"/><div className="aurora a2"/><div className="aurora a3"/>
-    <canvas ref={ref} className="login-particles"/>
-    <div className="login-grain"/>
+    {cfg.bg==='customGradient'?<div className="login-media" style={{background:`linear-gradient(135deg,${cfg.gFrom},${cfg.gVia} 50%,${cfg.gTo})`,opacity:cfg.opacity/100}}/>:null}
+    {cfg.bg==='image'&&cfg.mediaUrl?<div className="login-media" style={{backgroundImage:`url("${cfg.mediaUrl}")`,backgroundSize:cfg.fit,backgroundPosition:'center',opacity:cfg.opacity/100}}/>:null}
+    {cfg.bg==='video'&&cfg.mediaUrl?<video className="login-media" src={cfg.mediaUrl} autoPlay muted loop={cfg.loop} playsInline style={{objectFit:cfg.fit,opacity:cfg.opacity/100}}/>:null}
+    {lights?<React.Fragment><div className="aurora a1" style={{opacity:ovOp*.9,animationDuration:dur(22)}}/><div className="aurora a2" style={{opacity:ovOp*.9,animationDuration:dur(26)}}/><div className="aurora a3" style={{opacity:ovOp*.5,animationDuration:dur(30)}}/></React.Fragment>:null}
+    {cfg.ov.blur?<div className="login-blur"/>:null}
+    {cfg.ov.particles?<canvas ref={ref} className="login-particles" style={{opacity:Math.min(1,ovOp+.25)}}/>:null}
+    {cfg.ov.grain?<div className="login-grain" style={{opacity:ovOp*.6}}/>:null}
   </div>;
 }
 
@@ -968,7 +1037,7 @@ function ClientInvoices({toast}){
   </div>;
 }
 
-function Shell({role,setRole,lang,setLang,theme,setTheme}){
+function Shell({role,setRole,isSuper,lang,setLang,theme,setTheme}){
   const{t}=useT();
   const[page,setPage]=useState('dashboard');const[activeProject,setActiveProject]=useState(null);
   const[cmdk,setCmdk]=useState(false);const[notif,setNotif]=useState(false);const[newP,setNewP]=useState(false);const[toastMsg,setToastMsg]=useState(null);
@@ -1012,7 +1081,7 @@ function Shell({role,setRole,lang,setLang,theme,setTheme}){
       {page==='calendar'&&<Calendar/>}
       {page==='drive'&&(role==='client'?<MyFiles role={role} toast={toast}/>:<DriveView role={role} toast={toast}/>)}
       {page==='users'&&role==='admin'&&<Users toast={toast}/>}
-      {page==='settings'&&<Settings lang={lang} setLang={setLang} theme={theme} setTheme={setTheme} toast={toast}/>}
+      {page==='settings'&&<Settings lang={lang} setLang={setLang} theme={theme} setTheme={setTheme} toast={toast} isSuper={isSuper}/>}
     </main>
     {cmdk&&<CommandPalette close={()=>setCmdk(false)} go={go} setTheme={setTheme} theme={theme} nav={nav}/>}
     {newP&&<NewProject close={()=>setNewP(false)} toast={toast}/>}
@@ -1021,23 +1090,23 @@ function Shell({role,setRole,lang,setLang,theme,setTheme}){
 }
 
 function App(){
-  const[role,setRole]=useState(null);const[lang,setLang]=useState('en');const[theme,setTheme]=useState('light');
+  const[role,setRole]=useState(null);const[isSuper,setIsSuper]=useState(false);const[lang,setLang]=useState('en');const[theme,setTheme]=useState('light');
   useEffect(()=>{document.body.className=theme==='dark'?'dark':'';},[theme]);
   useEffect(()=>{document.documentElement.lang=lang;},[lang]);
   useEffect(()=>{
     if(!supa)return;
     const apply=async(s)=>{ if(!s)return; let r='client';
       try{const {data}=await supa.from('profiles').select('role').eq('id',s.user.id).single(); if(data&&data.role)r=data.role;}catch(e){}
-      setRole(r);
+      setIsSuper(r==='superadmin');setRole(r==='superadmin'?'admin':r);
     };
     supa.auth.getSession().then(({data})=>apply(data.session));
     const {data:sub}=supa.auth.onAuthStateChange((_e,s)=>apply(s));
     return ()=>{try{sub.subscription.unsubscribe();}catch(e){}};
   },[]);
-  const signOut=async()=>{ try{if(supa)await supa.auth.signOut();}catch(e){} setRole(null); };
+  const signOut=async()=>{ try{if(supa)await supa.auth.signOut();}catch(e){} setRole(null);setIsSuper(false); };
   const t=useMemo(()=>makeT(lang),[lang]);
   return <LangCtx.Provider value={{lang,t}}>
-    {role?<Shell role={role} setRole={signOut} lang={lang} setLang={setLang} theme={theme} setTheme={setTheme}/>:<Login onPick={setRole} lang={lang} setLang={setLang}/>}
+    {role?<Shell role={role} setRole={signOut} isSuper={isSuper} lang={lang} setLang={setLang} theme={theme} setTheme={setTheme}/>:<Login onPick={(id)=>{setIsSuper(id==='superadmin');setRole(id==='superadmin'?'admin':id);}} lang={lang} setLang={setLang}/>}
   </LangCtx.Provider>;
 }
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);

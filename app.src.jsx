@@ -85,7 +85,7 @@ const STRINGS={
     title:"Title",artistF:"Artist",clientF:"Client",priority:"Priority",deliveryDate:"Delivery date",progress:"Progress",status:"Status",
     signInSub:"Use your passkey to continue securely.",passkeyBtn:"Sign in with Passkey",faceTouch:"Face ID · Touch ID · security key",exploreDemo:"Explore the demo without signing in",verifying:"Verifying…",authed:"Authenticated",welcome:"Welcome back",chooseProfile:"Choose a profile to continue",endToEnd:"Private, anonymous & moderated by design",passkeyError:"Couldn't verify your passkey. Try again, or explore the demo.",tryAgain:"Try again",orEmail:"or",emailContinue:"Continue with email",emailPlaceholder:"you@email.com",sendLink:"Send sign-in link",checkEmail:"Check your email",checkEmailSub:"We sent a secure sign-in link to your inbox. Open it on this device to continue.",back:"Back",
     nav_myfiles:"My Files",myFilesTitle:"My Files",myFilesSub:"Your projects — view and download your files. Everything here is private to you.",downloadFiles:"Download files",preparing:"Preparing your download",driveSoon:"Your Google Drive folder will appear here once your project is set up.",noFilesYet:"No files yet.",openInvoice:"Open",created:"Created",overdue:"Overdue",invPending:"Pending & overdue",invHistory:"Paid history",invClientSub:"Your invoices — pending and overdue are shown first.",noPending:"You're all caught up — no pending invoices.",serviceType:"Service",
-    role_superadmin:"Super Admin",rd_superadmin:"Everything Admins can do — plus branding, roles and global settings.",loginScreen:"Login Screen",loginScreenSub:"Customize what visitors see on the sign-in screen. Only Super Admins can change this.",background:"Background",overlay:"Overlay",mediaUrl:"Media URL",uploadFile:"Upload file",fit:"Fit",loop:"Loop",intensity:"Intensity",speed:"Speed",opacityL:"Opacity",livePreview:"Live preview",resetDefault:"Reset to default",loginSaved:"Login screen updated",loginReset:"Reset to default.",accounting:"Accounting",accountingSub:"Money in and out, net balance and trends — updates as invoices change.",moneyIn:"Money in",moneyOut:"Money out",pendingIncome:"Pending income",netBalance:"Net balance",incomeVsExpense:"Income vs Expenses",paidVsPending:"Paid vs Pending",netEvolution:"Net balance over time",topClients:"Top clients",revenueByService:"Revenue by service",allClients:"All clients",allStatuses:"All statuses",p_day:"Day",p_week:"Week",p_month:"Month",p_quarter:"Quarter",p_year:"Year",p_custom:"Custom",
+    role_superadmin:"Super Admin",rd_superadmin:"Everything Admins can do — plus branding, roles and global settings.",loginScreen:"Login Screen",loginScreenSub:"Customize what visitors see on the sign-in screen. Only Super Admins can change this.",background:"Background",overlay:"Overlay",mediaUrl:"Media URL",uploadFile:"Upload file",fit:"Fit",loop:"Loop",intensity:"Intensity",speed:"Speed",opacityL:"Opacity",livePreview:"Live preview",resetDefault:"Reset to default",loginSaved:"Login screen updated",loginReset:"Reset to default.",accounting:"Accounting",accountingSub:"Money in and out, net balance and trends — updates as invoices change.",moneyIn:"Money in",moneyOut:"Money out",pendingIncome:"Pending income",netBalance:"Net balance",incomeVsExpense:"Income vs Expenses",paidVsPending:"Paid vs Pending",netEvolution:"Net balance over time",topClients:"Top clients",revenueByService:"Revenue by service",allClients:"All clients",allStatuses:"All statuses",p_day:"Day",p_week:"Week",p_month:"Month",p_quarter:"Quarter",p_year:"Year",p_custom:"Custom",markPaidTitle:"Mark invoice as paid",markPaidShort:"Mark paid",paymentDate:"Payment date",paymentMethod:"Payment method",reference:"Reference",internalNotes:"Internal notes",recordedBy:"Recorded by",markedPaid:"Invoice marked as paid",sendReminder:"Send reminder",reminderSent:"Reminder sent",inviteSub:"They will get a branded email to set up their account.",inviteSent:"Invitation sent",sendInvite:"Send invite",linkCopied:"Link copied",copy:"Copy",permSuperNote:"As a Super Admin you can invite anyone, create admins and super admins, change roles and deactivate users.",permAdminNote:"As an Admin you can invite artists and clients and create admins. Only Super Admins manage super admins.",active:"Active",inactive:"Inactive",deactivate:"Deactivate",activate:"Activate",superOnly:"Super Admin only",obTitle:"Welcome to Ideal Music",obSub:"Set up your account and company details.",obStep1:"You",obStep2:"Company",obStep3:"Billing",obName:"Your name",obCompany:"Company name",obPhone:"Phone",obCountry:"Country",obLegal:"Legal / registered name",obTaxId:"Tax ID / RFC / VAT",obNeedInvoice:"Need a fiscal invoice?",obExtra:"Anything else for invoicing?",obExtraPh:"PO number, billing contact, etc.",obFinish:"Finish setup",obDone:"You are all set",obDoneSub:"Your details are saved. We will be in touch and your projects will appear here.",next:"Continue",yes:"Yes",no:"No",importTitle:"Import",importSub:"Bring in existing clients, projects and history.",bulkCsv:"Bulk (CSV)",manual:"Manual",pasteCsv:"Paste CSV or upload a file",preview:"Preview",rowsDetected:"rows detected",willImport:"will import",duplicates:"duplicates",withErrors:"with errors",missing:"Missing",existing:"Already exists",new:"New",confirmImport:"Confirm import",imported:"records imported",addRecord:"Add record",remindersTitle:"Payment reminders",remindersSub:"Automatic branded reminders sent via email. Configure when they go out.",rmBefore:"Before due date (days)",rmOnDue:"On the due date",rmAfter:"After due date (days)",rmRecurring:"Recurring while pending (every N days)",
   },
   vi:{
     tagline:"Sản xuất âm nhạc, quản lý tinh tế.",pickRole:"Chọn vai trò để vào bản demo · 100% ẩn danh & kiểm duyệt",
@@ -753,7 +753,7 @@ function Contracts({role,toast}){
 /* ===== INVOICES ===== */
 const invTotal=(inv)=>inv.items.reduce((a,it)=>a+it.qty*it.rate,0);
 function Invoices({role,toast}){
-  const{t}=useT();const[gen,setGen]=useState(false);const[view,setView]=useState(null);
+  const{t}=useT();const[gen,setGen]=useState(false);const[view,setView]=useState(null);const[pay,setPay]=useState(null);const[,force]=useState(0);
   const IC={draft:"#8e8e93",sent:"#0a84ff",partial:"#ff9f0a",paid:"#34c759"};
   const list=role==='client'?INVOICES.filter(i=>i.clientName==='Lunar Records'):INVOICES;
   if(view)return <InvoiceView inv={view} back={()=>setView(null)} toast={toast}/>;
@@ -763,7 +763,8 @@ function Invoices({role,toast}){
     <div className="card solid" style={{padding:'8px 8px'}}><table className="tbl"><thead><tr><th>{t('invNumber')}</th><th>{t('billTo')}</th><th>{t('nav_projects')}</th><th>{t('amount')}</th><th>{t('balance')}</th><th>{t('status')}</th></tr></thead>
       <tbody>{list.map(inv=>{const tot=invTotal(inv);return <tr key={inv.id} onClick={()=>setView(inv)}><td><b className="mono" style={{fontSize:12.5}}>{inv.number}</b></td><td>{inv.clientName}</td><td>{inv.project}</td><td style={{fontWeight:600}}>{fmt(tot)}</td>
         <td style={{color:tot-inv.paid>0?'var(--orange)':'var(--green)',fontWeight:600}}>{fmt(tot-inv.paid)}</td>
-        <td><span className="chip" style={{color:IC[inv.status],background:IC[inv.status]+'22'}}>{t('inv_'+inv.status)}</span></td></tr>;})}</tbody></table></div>
+        <td><div style={{display:'flex',alignItems:'center',gap:8,justifyContent:'flex-end'}}><span className="chip" style={{color:IC[inv.status],background:IC[inv.status]+'22'}}>{t('inv_'+inv.status)}</span>{role==='admin'&&inv.status!=='paid'?<React.Fragment><button className="iconbtn" title={t('sendReminder')} onClick={(e)=>{e.stopPropagation();toast('✉ '+t('reminderSent'));}}><I.send style={{width:15,height:15}}/></button><button className="btn green sm" onClick={(e)=>{e.stopPropagation();setPay(inv);}}>{t('markPaidShort')}</button></React.Fragment>:null}</div></td></tr>;})}</tbody></table></div>
+    {pay?<MarkPaidModal inv={pay} close={()=>setPay(null)} onSaved={()=>{setPay(null);force(x=>x+1);}} toast={toast}/>:null}
     {gen&&<InvoiceGen close={()=>setGen(false)} open={(inv)=>{setGen(false);setView(inv);}} />}
   </div>;
 }
@@ -864,7 +865,7 @@ function Users({toast}){
 }
 
 /* ===== SETTINGS ===== */
-function Settings({lang,setLang,theme,setTheme,toast,isSuper}){
+function Settings({lang,setLang,theme,setTheme,toast,isSuper,role}){
   const{t}=useT();
   return <div className="view content narrow" style={{maxWidth:820}}>
     <div className="h-row"><div><h1>{t('settingsTitle')}</h1></div></div>
@@ -892,6 +893,7 @@ function Settings({lang,setLang,theme,setTheme,toast,isSuper}){
       <b style={{fontSize:16,display:'flex',alignItems:'center',gap:9}}>{theme==='dark'?<I.moon style={{width:18,height:18,color:'var(--orange)'}}/>:<I.sun style={{width:18,height:18,color:'var(--orange)'}}/>}{t('appearance')}</b>
       <div className="seg" style={{marginTop:14}}><button className={theme!=='dark'?'on':''} onClick={()=>setTheme('light')}><I.sun style={{width:14,height:14,display:'inline',verticalAlign:'-2px',marginRight:6}}/>{t('lightMode')}</button><button className={theme==='dark'?'on':''} onClick={()=>setTheme('dark')}><I.moon style={{width:14,height:14,display:'inline',verticalAlign:'-2px',marginRight:6}}/>{t('darkMode')}</button></div>
     </div>
+    {role==='admin'?<RemindersCard toast={toast}/>:null}
     {isSuper?<LoginCustomizer toast={toast}/>:null}
   </div>;
 }
@@ -1113,22 +1115,170 @@ function Accounting({role}){
   </div>;
 }
 
+/* ===== MARK AS PAID (admin) ===== */
+function MarkPaidModal({inv,close,onSaved,toast}){
+  const{t}=useT();const[method,setMethod]=useState('Bank transfer');const[date,setDate]=useState('Jul 18, 2026');const[ref,setRef]=useState('');const[notes,setNotes]=useState('');
+  const save=()=>{Object.assign(inv,{status:'paid',paid:invTotal(inv),payment:{date,method,reference:ref,notes,by:COMPANY.signatory}});toast('✓ '+t('markedPaid'));onSaved&&onSaved();};
+  return <div className="modal-sheet" onClick={close}><div className="sheet" onClick={e=>e.stopPropagation()}>
+    <h2 style={{fontSize:21,fontWeight:700,marginBottom:4}}>{t('markPaidTitle')}</h2>
+    <p style={{fontSize:13,color:'var(--text-2)',marginBottom:16}}>{inv.number} · {fmt(invTotal(inv))}</p>
+    <div className="grid" style={{gridTemplateColumns:'1fr 1fr',gap:12}}>
+      <div className="field"><label>{t('paymentDate')}</label><input value={date} onChange={e=>setDate(e.target.value)}/></div>
+      <div className="field"><label>{t('paymentMethod')}</label><select value={method} onChange={e=>setMethod(e.target.value)}><option>Bank transfer</option><option>Card</option><option>Cash</option><option>PayPal</option><option>Other</option></select></div>
+      <div className="field" style={{gridColumn:'1/3'}}><label>{t('reference')}</label><input value={ref} onChange={e=>setRef(e.target.value)} placeholder="Transaction ID / receipt #"/></div>
+      <div className="field" style={{gridColumn:'1/3'}}><label>{t('internalNotes')}</label><input value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Optional"/></div>
+    </div>
+    <div style={{fontSize:12,color:'var(--text-3)',margin:'2px 0 14px'}}>{t('recordedBy')}: {COMPANY.signatory}</div>
+    <div style={{display:'flex',gap:10}}><button className="btn ghost" style={{flex:1,justifyContent:'center'}} onClick={close}>{t('cancel')}</button><button className="btn green" style={{flex:1,justifyContent:'center'}} onClick={save}><I.check style={{width:15,height:15}}/>{t('markPaidShort')}</button></div>
+  </div></div>;
+}
+
+/* ===== USER MANAGEMENT (admin / super admin) ===== */
+const ROLE_META={superadmin:{label:'Super Admin',c:'#5e5ce6'},admin:{label:'Administrator',c:'#0a84ff'},client:{label:'Client',c:'#ff9f0a'},artist:{label:'Artist',c:'#34c759'}};
+const SEED_USERS=[
+  {id:1,name:'Donovan',email:'contact@fallenroses.net',role:'superadmin',active:true,i:5},
+  {id:2,name:'Maya Chen',email:'maya@idealmusic.net',role:'admin',active:true,i:3},
+  {id:3,name:'Lunar Records',email:'ops@lunarrecords.co',role:'client',active:true,i:1},
+  {id:4,name:'Nova Reyes',email:'nova@ideal-music.net',role:'artist',active:true,i:0},
+  {id:5,name:'Sunset Collective',email:'hi@sunsetco.fm',role:'client',active:false,i:2},
+];
+function InviteModal({isSuper,close,onInvite,toast}){
+  const{t}=useT();const[email,setEmail]=useState('');const[role,setRole]=useState('artist');
+  const roles=isSuper?['artist','client','admin','superadmin']:['artist','client','admin'];
+  const link='dashboard.ideal-music.net/?onboard='+Math.random().toString(36).slice(2,10);
+  return <div className="modal-sheet" onClick={close}><div className="sheet" onClick={e=>e.stopPropagation()}>
+    <h2 style={{fontSize:21,fontWeight:700,marginBottom:4}}>{t('inviteUser')}</h2>
+    <p style={{fontSize:13,color:'var(--text-2)',marginBottom:16}}>{t('inviteSub')}</p>
+    <div className="field"><label>{t('email')}</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="name@email.com"/></div>
+    <div className="field"><label>{t('role')}</label><div className="seg" style={{width:'100%',flexWrap:'wrap'}}>{roles.map(r=><button key={r} className={role===r?'on':''} style={{flex:1,minWidth:90}} onClick={()=>setRole(r)}>{ROLE_META[r].label}</button>)}</div></div>
+    {role==='client'?<div className="inv-link"><I.globe style={{width:14,height:14}}/><span className="mono" style={{flex:1,overflow:'hidden',textOverflow:'ellipsis'}}>{link}</span><button className="btn ghost sm" onClick={()=>{try{navigator.clipboard.writeText('https://'+link);}catch(_){}toast(t('linkCopied'));}}>{t('copy')}</button></div>:null}
+    <div style={{fontSize:12,color:'var(--text-3)',marginTop:8}}>{isSuper?t('permSuperNote'):t('permAdminNote')}</div>
+    <div style={{display:'flex',gap:10,marginTop:16}}><button className="btn ghost" style={{flex:1,justifyContent:'center'}} onClick={close}>{t('cancel')}</button><button className="btn" style={{flex:1,justifyContent:'center',opacity:email?1:.5}} disabled={!email} onClick={()=>onInvite({email,role})}><I.send style={{width:15,height:15}}/>{t('sendInvite')}</button></div>
+  </div></div>;
+}
+function UsersManage({toast,isSuper}){
+  const{t}=useT();const[users,setUsers]=useState(SEED_USERS);const[inv,setInv]=useState(false);
+  const canManage=(u)=>isSuper||u.role!=='superadmin';
+  const setRole=(id,role)=>setUsers(us=>us.map(u=>u.id===id?Object.assign({},u,{role}):u));
+  const toggle=(id)=>setUsers(us=>us.map(u=>u.id===id?Object.assign({},u,{active:!u.active}):u));
+  const roleOpts=isSuper?['artist','client','admin','superadmin']:['artist','client','admin'];
+  return <div className="view content narrow" style={{maxWidth:920}}>
+    <div className="h-row"><div><h1>{t('usersTitle')}</h1><p>{isSuper?t('permSuperNote'):t('permAdminNote')}</p></div>
+      <button className="btn" onClick={()=>setInv(true)}><I.plus style={{width:16,height:16}}/>{t('inviteUser')}</button></div>
+    <div className="card solid" style={{padding:'8px 8px'}}><table className="tbl"><thead><tr><th>{t('people')}</th><th>{t('role')}</th><th>{t('status')}</th><th></th></tr></thead>
+      <tbody>{users.map(u=><tr key={u.id}>
+        <td><div style={{display:'flex',alignItems:'center',gap:10}}><Avatar name={u.name} i={u.i} size={34}/><div><b style={{fontSize:14}}>{u.name}</b><div style={{fontSize:12,color:'var(--text-3)'}}>{u.email}</div></div></div></td>
+        <td>{canManage(u)?<select value={u.role} onChange={e=>setRole(u.id,e.target.value)} className="role-select">{(roleOpts.indexOf(u.role)<0?roleOpts.concat([u.role]):roleOpts).map(r=><option key={r} value={r}>{ROLE_META[r].label}</option>)}</select>:<span className="chip" style={{color:ROLE_META[u.role].c,background:ROLE_META[u.role].c+'22'}}>{ROLE_META[u.role].label}</span>}</td>
+        <td><span className="chip" style={{color:u.active?'var(--green)':'var(--text-3)',background:u.active?'rgba(52,199,89,.14)':'var(--sep)'}}>{u.active?t('active'):t('inactive')}</span></td>
+        <td style={{textAlign:'right'}}>{canManage(u)?<button className="btn ghost sm" onClick={()=>toggle(u.id)}>{u.active?t('deactivate'):t('activate')}</button>:<span style={{fontSize:11.5,color:'var(--text-3)'}}><I.lock style={{width:12,height:12,verticalAlign:'-2px'}}/> {t('superOnly')}</span>}</td></tr>)}</tbody></table></div>
+    {inv?<InviteModal isSuper={isSuper} close={()=>setInv(false)} onInvite={(u)=>{setUsers(us=>us.concat([{id:Date.now(),name:u.email.split('@')[0],email:u.email,role:u.role,active:true,i:us.length%6}]));setInv(false);toast('✉ '+t('inviteSent'));}} toast={toast}/>:null}
+  </div>;
+}
+
+/* ===== ONBOARDING (public invite link) ===== */
+const COUNTRIES=['United States','Mexico','Vietnam','India','United Kingdom','Canada','Germany','France','Spain','Brazil','Japan','Australia','Other'];
+const CURRENCIES=['USD ($)','EUR (€)','GBP (£)','MXN ($)','VND (₫)','INR (₹)','JPY (¥)','CAD ($)','AUD ($)'];
+function Onboarding({token}){
+  const{t}=useT();const[step,setStep]=useState(0);const[done,setDone]=useState(false);
+  const[f,setF]=useState({name:'',company:'',email:'',phone:'',address:'',country:'United States',legalName:'',taxId:'',currency:'USD ($)',needInvoice:'yes',notes:''});
+  const set=(k,v)=>setF(o=>Object.assign({},o,{[k]:v}));
+  const finish=()=>{try{localStorage.setItem('im_onboard_'+(token||'demo'),JSON.stringify(f));}catch(_){}setDone(true);};
+  if(done)return <div className="ob-wrap"><div className="ob-card ob-done"><div className="success-check" style={{background:'var(--green)',margin:'0 auto 8px'}}><I.check style={{width:30,height:30,color:'#fff'}}/></div><h1 style={{fontSize:26,fontWeight:720}}>{t('obDone')}</h1><p style={{color:'var(--text-2)',marginTop:8,lineHeight:1.5}}>{t('obDoneSub')}</p></div></div>;
+  const steps=[t('obStep1'),t('obStep2'),t('obStep3')];
+  return <div className="ob-wrap"><div className="ob-card">
+    <div className="ob-head"><div className="brandmark" style={{width:52,height:52,borderRadius:15}}><img src="/logo-white.png" alt="" style={{width:'64%',height:'64%',objectFit:'contain'}}/></div><div><h1 style={{fontSize:22,fontWeight:720}}>{t('obTitle')}</h1><p style={{color:'var(--text-2)',fontSize:13.5}}>{t('obSub')}</p></div></div>
+    <div className="ob-steps">{steps.map((s,i)=><div key={i} className={"ob-dot"+(i===step?' on':'')+(i<step?' done':'')}><span>{i<step?'✓':i+1}</span>{s}</div>)}</div>
+    {step===0?<div className="ob-grid">
+      <div className="field"><label>{t('obName')}</label><input value={f.name} onChange={e=>set('name',e.target.value)}/></div>
+      <div className="field"><label>{t('obCompany')}</label><input value={f.company} onChange={e=>set('company',e.target.value)}/></div>
+      <div className="field"><label>{t('email')}</label><input type="email" value={f.email} onChange={e=>set('email',e.target.value)}/></div>
+      <div className="field"><label>{t('obPhone')}</label><input value={f.phone} onChange={e=>set('phone',e.target.value)}/></div>
+    </div>:null}
+    {step===1?<div className="ob-grid">
+      <div className="field" style={{gridColumn:'1/3'}}><label>{t('address')}</label><input value={f.address} onChange={e=>set('address',e.target.value)}/></div>
+      <div className="field"><label>{t('obCountry')}</label><select value={f.country} onChange={e=>set('country',e.target.value)}>{COUNTRIES.map(c=><option key={c}>{c}</option>)}</select></div>
+      <div className="field"><label>{t('currency')}</label><select value={f.currency} onChange={e=>set('currency',e.target.value)}>{CURRENCIES.map(c=><option key={c}>{c}</option>)}</select></div>
+    </div>:null}
+    {step===2?<div className="ob-grid">
+      <div className="field"><label>{t('obLegal')}</label><input value={f.legalName} onChange={e=>set('legalName',e.target.value)} placeholder={f.company}/></div>
+      <div className="field"><label>{t('obTaxId')}</label><input value={f.taxId} onChange={e=>set('taxId',e.target.value)} placeholder="Tax ID / RFC / VAT"/></div>
+      <div className="field"><label>{t('obNeedInvoice')}</label><select value={f.needInvoice} onChange={e=>set('needInvoice',e.target.value)}><option value="yes">{t('yes')}</option><option value="no">{t('no')}</option></select></div>
+      <div className="field" style={{gridColumn:'1/3'}}><label>{t('obExtra')}</label><input value={f.notes} onChange={e=>set('notes',e.target.value)} placeholder={t('obExtraPh')}/></div>
+    </div>:null}
+    <div className="ob-actions">{step>0?<button className="btn ghost" onClick={()=>setStep(step-1)}>← {t('back')}</button>:<span/>}
+      {step<2?<button className="btn" onClick={()=>setStep(step+1)}>{t('next')} →</button>:<button className="btn green" onClick={finish}><I.check style={{width:15,height:15}}/>{t('obFinish')}</button>}</div>
+  </div></div>;
+}
+
+/* ===== IMPORT (manual + CSV with preview) ===== */
+const SAMPLE_CSV="client,company,project,service,date,amount,currency,status,drive\nLunar Records,Lunar Records LLC,Midnight Bloom,Mixing & Mastering,2026-06-28,1200,USD,paid,https://drive.google.com/lunar\nNeon Lab,Neon Lab Inc,Neon Tokyo,Mastering,2026-06-18,1500,USD,paid,\nVelvet Co.,Velvet Co.,Velvet Skies,Production,2026-07-02,1300,USD,pending,\n,,No Client Row,,,900,USD,,";
+function parseCSV(txt){const lines=(txt||'').trim().split(/\r?\n/);if(!lines[0])return{cols:[],rows:[]};const cols=lines[0].split(',').map(s=>s.trim());const rows=lines.slice(1).filter(l=>l.trim().replace(/,/g,'')).map(l=>{const cells=l.split(',');const o={};cols.forEach((c,i)=>o[c]=(cells[i]||'').trim());return o;});return{cols,rows};}
+function ImportView({toast}){
+  const{t}=useT();const[tab,setTab]=useState('csv');const[txt,setTxt]=useState(SAMPLE_CSV);const[preview,setPreview]=useState(null);
+  const existing=CLIENTS.map(c=>c.name.toLowerCase());
+  const run=()=>{const p=parseCSV(txt);const enriched=p.rows.map(r=>{const errs=['client','project'].filter(k=>!r[k]);const dup=existing.indexOf((r.client||'').toLowerCase())>=0;return {r,errs,dup};});setPreview({cols:p.cols,enriched});};
+  const confirm=()=>{const ok=preview.enriched.filter(x=>x.errs.length===0).length;toast('✓ '+ok+' '+t('imported'));setPreview(null);};
+  const onFile=(e)=>{const file=e.target.files&&e.target.files[0];if(!file)return;const rd=new FileReader();rd.onload=()=>setTxt(String(rd.result));rd.readAsText(file);};
+  return <div className="view content">
+    <div className="h-row"><div><h1 style={{display:'flex',alignItems:'center',gap:10}}><I.down style={{width:24,height:24,color:'var(--accent)'}}/>{t('importTitle')}</h1><p>{t('importSub')}</p></div></div>
+    <div className="seg" style={{marginBottom:16,maxWidth:320}}><button className={tab==='csv'?'on':''} style={{flex:1}} onClick={()=>setTab('csv')}>{t('bulkCsv')}</button><button className={tab==='manual'?'on':''} style={{flex:1}} onClick={()=>setTab('manual')}>{t('manual')}</button></div>
+    {tab==='csv'?<div className="card solid" style={{padding:'18px 20px'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10,flexWrap:'wrap',gap:8}}><b style={{fontSize:14}}>{t('pasteCsv')}</b><label className="lc-upload"><input type="file" accept=".csv,text/csv" onChange={onFile} style={{display:'none'}}/><I.cloud style={{width:15,height:15}}/>{t('uploadFile')}</label></div>
+      <textarea className="im-textarea" value={txt} onChange={e=>setTxt(e.target.value)} spellCheck="false"/>
+      <div style={{marginTop:12}}><button className="btn" onClick={run}><I.grid style={{width:15,height:15}}/>{t('preview')}</button></div>
+      {preview?<div className="im-preview">
+        <div className="im-summary"><span><b>{preview.enriched.length}</b> {t('rowsDetected')}</span><span className="im-ok"><b>{preview.enriched.filter(x=>x.errs.length===0&&!x.dup).length}</b> {t('willImport')}</span><span className="im-dup"><b>{preview.enriched.filter(x=>x.dup).length}</b> {t('duplicates')}</span><span className="im-err"><b>{preview.enriched.filter(x=>x.errs.length).length}</b> {t('withErrors')}</span></div>
+        <div className="im-tblwrap"><table className="tbl im-tbl"><thead><tr>{preview.cols.map(c=><th key={c}>{c}</th>)}<th></th></tr></thead>
+          <tbody>{preview.enriched.map((x,i)=><tr key={i} className={x.errs.length?'im-rerr':(x.dup?'im-rdup':'')}>{preview.cols.map(c=><td key={c}>{x.r[c]}</td>)}<td>{x.errs.length?<span className="im-tag err">{t('missing')}: {x.errs.join(', ')}</span>:(x.dup?<span className="im-tag dup">{t('existing')}</span>:<span className="im-tag ok">{t('new')}</span>)}</td></tr>)}</tbody></table></div>
+        <div style={{display:'flex',gap:10,marginTop:14}}><button className="btn ghost" onClick={()=>setPreview(null)}>{t('cancel')}</button><button className="btn green" onClick={confirm}><I.check style={{width:15,height:15}}/>{t('confirmImport')}</button></div>
+      </div>:null}
+    </div>:<div className="card solid" style={{padding:'18px 20px'}}>
+      <div className="grid" style={{gridTemplateColumns:'1fr 1fr',gap:12}}>
+        <div className="field"><label>{t('obCompany')}</label><input placeholder="Client company"/></div>
+        <div className="field"><label>{t('email')}</label><input placeholder="billing@client.com"/></div>
+        <div className="field"><label>{t('nav_projects')}</label><input placeholder="Project name"/></div>
+        <div className="field"><label>{t('serviceType')}</label><input placeholder="Mixing & Mastering"/></div>
+        <div className="field"><label>{t('amount')}</label><input placeholder="1200"/></div>
+        <div className="field"><label>{t('status')}</label><select><option>Paid</option><option>Pending</option></select></div>
+        <div className="field" style={{gridColumn:'1/3'}}><label>Google Drive</label><input placeholder="https://drive.google.com/…"/></div>
+      </div>
+      <button className="btn" style={{marginTop:8}} onClick={()=>toast('✓ 1 '+t('imported'))}><I.plus style={{width:15,height:15}}/>{t('addRecord')}</button>
+    </div>}
+  </div>;
+}
+
+/* ===== PAYMENT REMINDERS CONFIG (admin) ===== */
+function RemindersCard({toast}){
+  const{t}=useT();const[r,setR]=useState({before:true,beforeDays:3,onDue:true,after:true,afterDays:3,recurring:true,everyDays:7});
+  const set=(k,v)=>setR(o=>Object.assign({},o,{[k]:v}));
+  const row=(k,label,extra)=><div className="rm-row"><label className="rm-toggle"><input type="checkbox" checked={r[k]} onChange={e=>set(k,e.target.checked)}/><span>{label}</span></label>{extra}</div>;
+  return <div className="card solid" style={{padding:'22px 24px',marginBottom:18}}>
+    <b style={{fontSize:16,display:'flex',alignItems:'center',gap:9}}><I.bell style={{width:18,height:18,color:'var(--orange)'}}/>{t('remindersTitle')}</b>
+    <p style={{fontSize:13,color:'var(--text-2)',margin:'4px 0 16px'}}>{t('remindersSub')}</p>
+    {row('before',t('rmBefore'),<input className="rm-num" type="number" value={r.beforeDays} onChange={e=>set('beforeDays',+e.target.value)}/>)}
+    {row('onDue',t('rmOnDue'),null)}
+    {row('after',t('rmAfter'),<input className="rm-num" type="number" value={r.afterDays} onChange={e=>set('afterDays',+e.target.value)}/>)}
+    {row('recurring',t('rmRecurring'),<input className="rm-num" type="number" value={r.everyDays} onChange={e=>set('everyDays',+e.target.value)}/>)}
+    <button className="btn" style={{marginTop:14}} onClick={()=>{try{localStorage.setItem('im_reminders',JSON.stringify(r));}catch(_){}toast('✓ '+t('saveChanges'));}}>{t('saveChanges')}</button>
+  </div>;
+}
+
 function Shell({role,setRole,isSuper,lang,setLang,theme,setTheme}){
   const{t}=useT();
   const[page,setPage]=useState('dashboard');const[activeProject,setActiveProject]=useState(null);
-  const[cmdk,setCmdk]=useState(false);const[notif,setNotif]=useState(false);const[newP,setNewP]=useState(false);const[toastMsg,setToastMsg]=useState(null);
+  const[cmdk,setCmdk]=useState(false);const[notif,setNotif]=useState(false);const[newP,setNewP]=useState(false);const[toastMsg,setToastMsg]=useState(null);const[mnav,setMnav]=useState(false);
   const toast=(m)=>{setToastMsg(m);setTimeout(()=>setToastMsg(null),2600);};
   useEffect(()=>{const h=(e)=>{if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();setCmdk(v=>!v);}if(e.key==='Escape'){setCmdk(false);setNotif(false);setNewP(false);}};window.addEventListener('keydown',h);return()=>window.removeEventListener('keydown',h);},[]);
-  const go=(p,proj)=>{if(p==='new'){setNewP(true);return;}if(p==='project'){setActiveProject(proj);setPage('project');return;}setPage(p);setActiveProject(null);setNotif(false);};
+  const go=(p,proj)=>{setMnav(false);if(p==='new'){setNewP(true);return;}if(p==='project'){setActiveProject(proj);setPage('project');return;}setPage(p);setActiveProject(null);setNotif(false);};
   const nav=role==='admin'
-    ?[['dashboard','grid',t('nav_dashboard')],['projects','folder',t('nav_projects')],['requests','inbox',t('nav_requests')],['contracts','contract',t('nav_contracts')],['invoices','receipt',t('nav_invoices')],['payments','dollar',t('nav_payments')],['accounting','activity',t('accounting')],['calendar','cal',t('nav_calendar')],['drive','drive',t('nav_drive')],['users','users',t('nav_users')],['settings','settings',t('nav_settings')]]
+    ?[['dashboard','grid',t('nav_dashboard')],['projects','folder',t('nav_projects')],['requests','inbox',t('nav_requests')],['contracts','contract',t('nav_contracts')],['invoices','receipt',t('nav_invoices')],['payments','dollar',t('nav_payments')],['accounting','activity',t('accounting')],['calendar','cal',t('nav_calendar')],['drive','drive',t('nav_drive')],['users','users',t('nav_users')],['import','down',t('importTitle')],['settings','settings',t('nav_settings')]]
     :role==='client'
     ?[['dashboard','grid',t('nav_home')],['projects','folder',t('nav_myprojects')],['requests','inbox',t('nav_requests')],['contracts','contract',t('nav_contracts')],['invoices','receipt',t('nav_invoices')],['drive','drive',t('nav_myfiles')],['settings','settings',t('nav_settings')]]
     :[['dashboard','grid',t('nav_home')],['projects','folder',t('nav_assigned')],['earnings','dollar',t('nav_earnings')],['drive','drive',t('nav_files')],['settings','settings',t('nav_settings')]];
-  const titles={dashboard:role==='admin'?t('nav_dashboard'):t('nav_home'),projects:role==='client'?t('nav_myprojects'):role==='artist'?t('nav_assigned'):t('nav_projects'),requests:t('requestsTitle'),contracts:t('contractsTitle'),invoices:t('invoicesTitle'),payments:t('paymentsTitle'),accounting:t('accounting'),earnings:t('nav_earnings'),calendar:t('calTitle'),drive:t('driveTitle'),users:t('usersTitle'),settings:t('settingsTitle'),project:activeProject?activeProject.title:''};
+  const titles={dashboard:role==='admin'?t('nav_dashboard'):t('nav_home'),projects:role==='client'?t('nav_myprojects'):role==='artist'?t('nav_assigned'):t('nav_projects'),requests:t('requestsTitle'),contracts:t('contractsTitle'),invoices:t('invoicesTitle'),payments:t('paymentsTitle'),accounting:t('accounting'),import:t('importTitle'),earnings:t('nav_earnings'),calendar:t('calTitle'),drive:t('driveTitle'),users:t('usersTitle'),settings:t('settingsTitle'),project:activeProject?activeProject.title:''};
   const prof=PROFILES[role];const subt={admin:t('workspace'),client:t('portal'),artist:t('studio')}[role];
   return <div className="shell">
-    <aside className="sidebar">
+    <aside className={"sidebar"+(mnav?" open":"")}>
       <div className="sb-brand"><div className="bm"><img src="/logo-white.png" alt="" style={{width:'70%',height:'70%',objectFit:'contain'}}/></div><div><b>Ideal Music</b><small>{subt}</small></div></div>
       <div className="navlabel">{t('menu')}</div>
       {nav.map(([k,ic,l])=><button key={k} className={"navitem"+(page===k?' active':'')} onClick={()=>go(k)}><span className="ico">{I[ic]({style:{width:18,height:18}})}</span>{l}{k==='requests'&&role==='admin'&&<span className="badge">2</span>}{k==='projects'&&role==='client'&&<span className="badge">1</span>}</button>)}
@@ -1139,8 +1289,9 @@ function Shell({role,setRole,isSuper,lang,setLang,theme,setTheme}){
       <div className="userchip" onClick={()=>toast(t('switchRole'))}><Avatar name={prof.name} i={prof.i}/><div className="meta"><b>{prof.name}</b><small>{t('role_'+role)}</small></div><I.lock style={{width:14,height:14,color:'var(--text-3)',marginLeft:'auto'}}/></div>
       <button className="navitem" style={{justifyContent:'center',color:'var(--red)'}} onClick={()=>setRole(null)}>{t('signout')}</button>
     </aside>
+    {mnav?<div className="sb-backdrop" onClick={()=>setMnav(false)}/>:null}
     <main className="main">
-      <header className="topbar"><h2>{titles[page]}</h2>
+      <header className="topbar"><button className="hamb" onClick={()=>setMnav(true)} aria-label="Menu"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round"/></svg></button><h2>{titles[page]}</h2>
         <div className="search" onClick={()=>setCmdk(true)}><I.search style={{width:16,height:16}}/><input placeholder={t('search')} readOnly/><kbd>⌘K</kbd></div>
         <button className="iconbtn" onClick={()=>setNotif(!notif)}><I.bell style={{width:19,height:19}}/><span className="dot"/></button>
         {notif&&<div className="notif-panel"><div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 16px'}}><b style={{fontSize:15}}>{t('notifications')}</b><button style={{fontSize:12.5,color:'var(--accent)',fontWeight:560}} onClick={()=>setNotif(false)}>{t('markRead')}</button></div>
@@ -1157,8 +1308,9 @@ function Shell({role,setRole,isSuper,lang,setLang,theme,setTheme}){
       {page==='earnings'&&<Payments role={role} toast={toast}/>}
       {page==='calendar'&&<Calendar/>}
       {page==='drive'&&(role==='client'?<MyFiles role={role} toast={toast}/>:<DriveView role={role} toast={toast}/>)}
-      {page==='users'&&role==='admin'&&<Users toast={toast}/>}
-      {page==='settings'&&<Settings lang={lang} setLang={setLang} theme={theme} setTheme={setTheme} toast={toast} isSuper={isSuper}/>}
+      {page==='users'&&role==='admin'&&<UsersManage toast={toast} isSuper={isSuper}/>}
+      {page==='import'&&role==='admin'&&<ImportView toast={toast}/>}
+      {page==='settings'&&<Settings lang={lang} setLang={setLang} theme={theme} setTheme={setTheme} toast={toast} isSuper={isSuper} role={role}/>}
     </main>
     {cmdk&&<CommandPalette close={()=>setCmdk(false)} go={go} setTheme={setTheme} theme={theme} nav={nav}/>}
     {newP&&<NewProject close={()=>setNewP(false)} toast={toast}/>}
@@ -1182,8 +1334,9 @@ function App(){
   },[]);
   const signOut=async()=>{ try{if(supa)await supa.auth.signOut();}catch(e){} setRole(null);setIsSuper(false); };
   const t=useMemo(()=>makeT(lang),[lang]);
+  const onboard=(()=>{try{return new URLSearchParams(location.search).get('onboard');}catch(_){return null;}})();
   return <LangCtx.Provider value={{lang,t}}>
-    {role?<Shell role={role} setRole={signOut} isSuper={isSuper} lang={lang} setLang={setLang} theme={theme} setTheme={setTheme}/>:<Login onPick={(id)=>{setIsSuper(id==='superadmin');setRole(id==='superadmin'?'admin':id);}} lang={lang} setLang={setLang}/>}
+    {onboard?<Onboarding token={onboard}/>:(role?<Shell role={role} setRole={signOut} isSuper={isSuper} lang={lang} setLang={setLang} theme={theme} setTheme={setTheme}/>:<Login onPick={(id)=>{setIsSuper(id==='superadmin');setRole(id==='superadmin'?'admin':id);}} lang={lang} setLang={setLang}/>)}
   </LangCtx.Provider>;
 }
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);

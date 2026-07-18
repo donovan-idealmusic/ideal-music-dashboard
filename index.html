@@ -330,6 +330,48 @@ input,textarea,select{font-family:inherit;}
 .lc-preview-label{font-size:11.5px;font-weight:640;text-transform:uppercase;letter-spacing:.03em;color:var(--text-3);margin-bottom:8px;}
 .lc-preview{position:relative;height:330px;border-radius:18px;overflow:hidden;border:1px solid var(--sep);box-shadow:var(--shadow);}
 .lc-preview .login,.lp-preview{position:absolute;inset:0;height:100%;}
+
+/* IM-INCREMENT-3 */
+.ac-filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:18px;}
+.ac-period{flex-wrap:wrap;}
+.ac-filters select{background:var(--card-solid);border:1px solid var(--sep);border-radius:12px;padding:9px 12px;font-size:13px;color:var(--text);cursor:pointer;}
+.ac-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:14px;margin-bottom:18px;}
+.ac-kpi{display:flex;align-items:center;gap:12px;background:var(--card-solid);border:1px solid var(--sep);border-radius:16px;padding:15px 17px;box-shadow:var(--shadow);}
+.ac-kpi-ic{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex:0 0 38px;}
+.ac-kpi-v{font-size:20px;font-weight:720;letter-spacing:-.02em;}
+.ac-kpi-l{font-size:12px;color:var(--text-3);margin-top:1px;}
+.ac-charts{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.ac-chart-wide{grid-column:1/3;}
+@media(max-width:820px){.ac-charts{grid-template-columns:1fr;}.ac-chart-wide{grid-column:auto;}}
+.ac-charts .card{padding:18px 20px;}
+.ac-ch-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:10px;}
+.ac-ch-head b{font-size:15px;}
+.ac-legend{display:flex;gap:14px;font-size:12px;color:var(--text-3);}
+.ac-legend span,.ac-donut-legend span{display:flex;align-items:center;gap:6px;}
+.ac-legend i,.ac-donut-legend i{width:9px;height:9px;border-radius:3px;display:inline-block;}
+.ac-bars{display:flex;align-items:flex-end;gap:10px;padding-top:8px;}
+.ac-barcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end;}
+.ac-barpair{display:flex;align-items:flex-end;gap:4px;height:100%;width:100%;justify-content:center;}
+.ac-bar{width:15px;border-radius:6px 6px 0 0;transform-origin:bottom;animation:barGrow .7s cubic-bezier(.22,1,.36,1) backwards;min-height:2px;}
+.ac-bar.in{background:linear-gradient(180deg,#42d266,#2aa84a);}
+.ac-bar.out{background:linear-gradient(180deg,#ff6b5e,#ff3b30);}
+@keyframes barGrow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+.ac-blabel{font-size:11px;color:var(--text-3);}
+.ac-area{width:100%;height:160px;display:block;}
+.ac-arealine{stroke-dasharray:1600;stroke-dashoffset:1600;animation:acDraw 1.6s cubic-bezier(.22,1,.36,1) forwards;}
+@keyframes acDraw{to{stroke-dashoffset:0}}
+.ac-areafill{opacity:0;animation:fadeIn 1s .5s forwards;}
+.ac-net-big{font-size:18px;font-weight:720;color:var(--green);}
+.ac-donut-wrap{display:flex;align-items:center;gap:20px;flex-wrap:wrap;}
+.ac-donut-svg{animation:pop .7s cubic-bezier(.22,1,.36,1) both;}
+.ac-donut-legend{display:flex;flex-direction:column;gap:9px;font-size:12.5px;color:var(--text-2);}
+.ac-hbars{display:flex;flex-direction:column;gap:13px;}
+.ac-hrow{display:grid;grid-template-columns:130px 1fr auto;align-items:center;gap:10px;}
+.ac-hlabel{font-size:12.5px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ac-htrack{height:10px;background:var(--sep);border-radius:6px;overflow:hidden;}
+.ac-hfill{height:100%;border-radius:6px;transform-origin:left;animation:hgrow .8s cubic-bezier(.22,1,.36,1) backwards;}
+@keyframes hgrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.ac-hval{font-size:12.5px;font-weight:600;}
 </style>
 </head>
 <body>
@@ -1190,7 +1232,26 @@ const STRINGS = {
     livePreview: "Live preview",
     resetDefault: "Reset to default",
     loginSaved: "Login screen updated",
-    loginReset: "Reset to default."
+    loginReset: "Reset to default.",
+    accounting: "Accounting",
+    accountingSub: "Money in and out, net balance and trends — updates as invoices change.",
+    moneyIn: "Money in",
+    moneyOut: "Money out",
+    pendingIncome: "Pending income",
+    netBalance: "Net balance",
+    incomeVsExpense: "Income vs Expenses",
+    paidVsPending: "Paid vs Pending",
+    netEvolution: "Net balance over time",
+    topClients: "Top clients",
+    revenueByService: "Revenue by service",
+    allClients: "All clients",
+    allStatuses: "All statuses",
+    p_day: "Day",
+    p_week: "Week",
+    p_month: "Month",
+    p_quarter: "Quarter",
+    p_year: "Year",
+    p_custom: "Custom"
   },
   vi: {
     tagline: "Sản xuất âm nhạc, quản lý tinh tế.",
@@ -7097,6 +7158,418 @@ function ClientInvoices({
     }
   }, history.map(Row)) : null) : null);
 }
+const ACCT_MONTHS = [{
+  m: 'Feb',
+  in: 8200,
+  out: 3100
+}, {
+  m: 'Mar',
+  in: 10600,
+  out: 3800
+}, {
+  m: 'Apr',
+  in: 9400,
+  out: 4200
+}, {
+  m: 'May',
+  in: 12800,
+  out: 4600
+}, {
+  m: 'Jun',
+  in: 15200,
+  out: 5100
+}, {
+  m: 'Jul',
+  in: 14200,
+  out: 5600
+}];
+function AcctBars({
+  data,
+  h = 190
+}) {
+  const max = Math.max.apply(null, data.map(d => Math.max(d.a, d.b)).concat([1]));
+  return React.createElement("div", {
+    className: "ac-bars",
+    style: {
+      height: h
+    }
+  }, data.map((d, i) => React.createElement("div", {
+    className: "ac-barcol",
+    key: i
+  }, React.createElement("div", {
+    className: "ac-barpair"
+  }, React.createElement("div", {
+    className: "ac-bar in",
+    style: {
+      height: d.a / max * 100 + '%',
+      animationDelay: i * 0.06 + 's'
+    }
+  }), React.createElement("div", {
+    className: "ac-bar out",
+    style: {
+      height: d.b / max * 100 + '%',
+      animationDelay: i * 0.06 + 0.03 + 's'
+    }
+  })), React.createElement("span", {
+    className: "ac-blabel"
+  }, d.label))));
+}
+function AcctArea({
+  pts,
+  h = 160,
+  color = '#0a84ff'
+}) {
+  const w = 520;
+  const max = Math.max.apply(null, pts.concat([1]));
+  const min = Math.min.apply(null, pts.concat([0]));
+  const rng = max - min || 1;
+  const step = w / (pts.length - 1 || 1);
+  const xy = pts.map((v, i) => [i * step, h - 8 - (v - min) / rng * (h - 24)]);
+  const line = xy.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+  const area = line + ' L ' + w + ' ' + h + ' L 0 ' + h + ' Z';
+  return React.createElement("svg", {
+    className: "ac-area",
+    viewBox: '0 0 ' + w + ' ' + h,
+    preserveAspectRatio: "none"
+  }, React.createElement("defs", null, React.createElement("linearGradient", {
+    id: "acg",
+    x1: "0",
+    y1: "0",
+    x2: "0",
+    y2: "1"
+  }, React.createElement("stop", {
+    offset: "0",
+    stopColor: color,
+    stopOpacity: "0.28"
+  }), React.createElement("stop", {
+    offset: "1",
+    stopColor: color,
+    stopOpacity: "0"
+  }))), React.createElement("path", {
+    d: area,
+    fill: "url(#acg)",
+    className: "ac-areafill"
+  }), React.createElement("path", {
+    d: line,
+    fill: "none",
+    stroke: color,
+    strokeWidth: "2.5",
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    className: "ac-arealine"
+  }));
+}
+function AcctDonut({
+  paid,
+  pending,
+  overdue
+}) {
+  const tot = paid + pending + overdue || 1;
+  const R = 54,
+    C = 2 * Math.PI * R;
+  const seg = (v, off, col) => {
+    const len = v / tot * C;
+    return React.createElement("circle", {
+      cx: "70",
+      cy: "70",
+      r: R,
+      fill: "none",
+      stroke: col,
+      strokeWidth: "18",
+      strokeDasharray: len + ' ' + (C - len),
+      strokeDashoffset: -off,
+      transform: "rotate(-90 70 70)"
+    });
+  };
+  return React.createElement("svg", {
+    width: "140",
+    height: "140",
+    viewBox: "0 0 140 140",
+    className: "ac-donut-svg"
+  }, React.createElement("circle", {
+    cx: "70",
+    cy: "70",
+    r: R,
+    fill: "none",
+    stroke: "var(--sep)",
+    strokeWidth: "18"
+  }), seg(paid, 0, '#34c759'), seg(pending, paid / tot * C, '#ff9f0a'), seg(overdue, (paid + pending) / tot * C, '#ff3b30'), React.createElement("text", {
+    x: "70",
+    y: "66",
+    textAnchor: "middle",
+    fontSize: "15",
+    fontWeight: "700",
+    fill: "var(--text)"
+  }, Math.round(paid / tot * 100), "%"), React.createElement("text", {
+    x: "70",
+    y: "83",
+    textAnchor: "middle",
+    fontSize: "9",
+    letterSpacing: "1",
+    fill: "var(--text-3)"
+  }, "PAID"));
+}
+function AcctHBars({
+  rows,
+  color
+}) {
+  const max = Math.max.apply(null, rows.map(r => r.v).concat([1]));
+  return React.createElement("div", {
+    className: "ac-hbars"
+  }, rows.map((r, i) => React.createElement("div", {
+    className: "ac-hrow",
+    key: i
+  }, React.createElement("span", {
+    className: "ac-hlabel"
+  }, r.label), React.createElement("div", {
+    className: "ac-htrack"
+  }, React.createElement("div", {
+    className: "ac-hfill",
+    style: {
+      width: r.v / max * 100 + '%',
+      background: color,
+      animationDelay: i * 0.08 + 's'
+    }
+  })), React.createElement("span", {
+    className: "ac-hval"
+  }, fmt(r.v)))));
+}
+function Accounting({
+  role
+}) {
+  const {
+    t
+  } = useT();
+  const [period, setPeriod] = useState('month');
+  const [client, setClient] = useState('all');
+  const [status, setStatus] = useState('all');
+  const inc = INVOICES.map(iv => ({
+    client: iv.clientName,
+    amount: invTotal(iv),
+    paid: iv.paid,
+    status: iv.status
+  }));
+  const fInc = inc.filter(x => (client === 'all' || x.client === client) && (status === 'all' || x.status === status));
+  const outstanding = fInc.reduce((a, x) => a + (x.amount - x.paid), 0);
+  const collected = fInc.reduce((a, x) => a + x.paid, 0);
+  const overdue = INVOICES.filter(iv => iv.status !== 'paid' && parseDue(iv.due) < TODAY && (client === 'all' || iv.clientName === client)).reduce((a, iv) => a + (invTotal(iv) - iv.paid), 0);
+  const totalIn = ACCT_MONTHS.reduce((a, m) => a + m.in, 0),
+    totalOut = ACCT_MONTHS.reduce((a, m) => a + m.out, 0),
+    net = totalIn - totalOut;
+  let bars = ACCT_MONTHS.map(m => ({
+    label: m.m,
+    a: m.in,
+    b: m.out
+  }));
+  if (period === 'quarter') bars = [{
+    label: 'Q1',
+    a: ACCT_MONTHS.slice(0, 3).reduce((s, m) => s + m.in, 0),
+    b: ACCT_MONTHS.slice(0, 3).reduce((s, m) => s + m.out, 0)
+  }, {
+    label: 'Q2',
+    a: ACCT_MONTHS.slice(3).reduce((s, m) => s + m.in, 0),
+    b: ACCT_MONTHS.slice(3).reduce((s, m) => s + m.out, 0)
+  }];
+  if (period === 'year') bars = [{
+    label: '2026',
+    a: totalIn,
+    b: totalOut
+  }];
+  if (period === 'week') bars = [['W1', 3200, 1100], ['W2', 3800, 1300], ['W3', 3600, 1250], ['W4', 3600, 1950]].map(x => ({
+    label: x[0],
+    a: x[1],
+    b: x[2]
+  }));
+  if (period === 'day') bars = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d, i) => ({
+    label: d,
+    a: [520, 610, 480, 720, 900, 300, 240][i],
+    b: [180, 210, 160, 240, 300, 90, 70][i]
+  }));
+  const netSeries = [];
+  ACCT_MONTHS.reduce((p, m) => {
+    const v = p + (m.in - m.out);
+    netSeries.push(v);
+    return v;
+  }, 0);
+  const paidAmt = fInc.filter(x => x.status === 'paid').reduce((a, x) => a + x.amount, 0);
+  const pendAmt = fInc.filter(x => x.status !== 'paid').reduce((a, x) => a + (x.amount - x.paid), 0);
+  const byClient = {};
+  inc.forEach(x => {
+    byClient[x.client] = (byClient[x.client] || 0) + x.amount;
+  });
+  const topClients = Object.keys(byClient).map(k => ({
+    label: k,
+    v: byClient[k]
+  })).sort((a, b) => b.v - a.v).slice(0, 5);
+  const bySvc = [{
+    label: 'Mixing & Mastering',
+    v: 21800
+  }, {
+    label: 'Mastering',
+    v: 12400
+  }, {
+    label: 'Production',
+    v: 9600
+  }];
+  const clients = ['all'].concat(Object.keys(byClient));
+  const kpis = [{
+    label: t('moneyIn'),
+    v: fmt(totalIn),
+    c: '#34c759',
+    ic: 'down'
+  }, {
+    label: t('moneyOut'),
+    v: fmt(totalOut),
+    c: '#ff3b30',
+    ic: 'up'
+  }, {
+    label: t('pendingIncome'),
+    v: fmt(outstanding),
+    c: '#ff9f0a',
+    ic: 'clock'
+  }, {
+    label: t('netBalance'),
+    v: fmt(net),
+    c: '#0a84ff',
+    ic: 'activity'
+  }, {
+    label: t('inv_paid'),
+    v: fmt(collected),
+    c: '#5e5ce6',
+    ic: 'check'
+  }, {
+    label: t('overdue'),
+    v: fmt(overdue),
+    c: '#ff2d55',
+    ic: 'bell'
+  }];
+  return React.createElement("div", {
+    className: "view content"
+  }, React.createElement("div", {
+    className: "h-row"
+  }, React.createElement("div", null, React.createElement("h1", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10
+    }
+  }, React.createElement(I.dollar, {
+    style: {
+      width: 26,
+      height: 26,
+      color: 'var(--green)'
+    }
+  }), t('accounting')), React.createElement("p", null, t('accountingSub')))), React.createElement("div", {
+    className: "ac-filters"
+  }, React.createElement("div", {
+    className: "seg ac-period"
+  }, [['day', t('p_day')], ['week', t('p_week')], ['month', t('p_month')], ['quarter', t('p_quarter')], ['year', t('p_year')], ['custom', t('p_custom')]].map(x => React.createElement("button", {
+    key: x[0],
+    className: period === x[0] ? 'on' : '',
+    onClick: () => setPeriod(x[0])
+  }, x[1]))), React.createElement("select", {
+    value: client,
+    onChange: e => setClient(e.target.value)
+  }, clients.map(c => React.createElement("option", {
+    key: c,
+    value: c
+  }, c === 'all' ? t('allClients') : c))), React.createElement("select", {
+    value: status,
+    onChange: e => setStatus(e.target.value)
+  }, React.createElement("option", {
+    value: "all"
+  }, t('allStatuses')), React.createElement("option", {
+    value: "paid"
+  }, t('inv_paid')), React.createElement("option", {
+    value: "sent"
+  }, t('inv_sent')), React.createElement("option", {
+    value: "partial"
+  }, t('inv_partial'))), React.createElement("select", null, React.createElement("option", null, "USD ($)"), React.createElement("option", null, "VND (₫)"), React.createElement("option", null, "INR (₹)"))), React.createElement("div", {
+    className: "ac-kpis stagger"
+  }, kpis.map((k, i) => React.createElement("div", {
+    className: "ac-kpi",
+    key: i
+  }, React.createElement("div", {
+    className: "ac-kpi-ic",
+    style: {
+      background: k.c + '22',
+      color: k.c
+    }
+  }, I[k.ic]({
+    style: {
+      width: 18,
+      height: 18
+    }
+  })), React.createElement("div", null, React.createElement("div", {
+    className: "ac-kpi-v"
+  }, k.v), React.createElement("div", {
+    className: "ac-kpi-l"
+  }, k.label))))), React.createElement("div", {
+    className: "ac-charts"
+  }, React.createElement("div", {
+    className: "card solid ac-chart-wide"
+  }, React.createElement("div", {
+    className: "ac-ch-head"
+  }, React.createElement("b", null, t('incomeVsExpense')), React.createElement("div", {
+    className: "ac-legend"
+  }, React.createElement("span", null, React.createElement("i", {
+    style: {
+      background: '#34c759'
+    }
+  }), t('moneyIn')), React.createElement("span", null, React.createElement("i", {
+    style: {
+      background: '#ff3b30'
+    }
+  }), t('moneyOut')))), React.createElement(AcctBars, {
+    data: bars
+  })), React.createElement("div", {
+    className: "card solid"
+  }, React.createElement("div", {
+    className: "ac-ch-head"
+  }, React.createElement("b", null, t('paidVsPending'))), React.createElement("div", {
+    className: "ac-donut-wrap"
+  }, React.createElement(AcctDonut, {
+    paid: paidAmt,
+    pending: pendAmt,
+    overdue: overdue
+  }), React.createElement("div", {
+    className: "ac-donut-legend"
+  }, React.createElement("span", null, React.createElement("i", {
+    style: {
+      background: '#34c759'
+    }
+  }), t('inv_paid'), " · ", fmt(paidAmt)), React.createElement("span", null, React.createElement("i", {
+    style: {
+      background: '#ff9f0a'
+    }
+  }), t('st_pending'), " · ", fmt(pendAmt)), React.createElement("span", null, React.createElement("i", {
+    style: {
+      background: '#ff3b30'
+    }
+  }), t('overdue'), " · ", fmt(overdue))))), React.createElement("div", {
+    className: "card solid ac-chart-wide"
+  }, React.createElement("div", {
+    className: "ac-ch-head"
+  }, React.createElement("b", null, t('netEvolution')), React.createElement("span", {
+    className: "ac-net-big"
+  }, fmt(net))), React.createElement(AcctArea, {
+    pts: netSeries
+  })), React.createElement("div", {
+    className: "card solid"
+  }, React.createElement("div", {
+    className: "ac-ch-head"
+  }, React.createElement("b", null, t('topClients'))), React.createElement(AcctHBars, {
+    rows: topClients,
+    color: "#5e5ce6"
+  })), React.createElement("div", {
+    className: "card solid"
+  }, React.createElement("div", {
+    className: "ac-ch-head"
+  }, React.createElement("b", null, t('revenueByService'))), React.createElement(AcctHBars, {
+    rows: bySvc,
+    color: "#0a84ff"
+  }))));
+}
 function Shell({
   role,
   setRole,
@@ -7148,7 +7621,7 @@ function Shell({
     setActiveProject(null);
     setNotif(false);
   };
-  const nav = role === 'admin' ? [['dashboard', 'grid', t('nav_dashboard')], ['projects', 'folder', t('nav_projects')], ['requests', 'inbox', t('nav_requests')], ['contracts', 'contract', t('nav_contracts')], ['invoices', 'receipt', t('nav_invoices')], ['payments', 'dollar', t('nav_payments')], ['calendar', 'cal', t('nav_calendar')], ['drive', 'drive', t('nav_drive')], ['users', 'users', t('nav_users')], ['settings', 'settings', t('nav_settings')]] : role === 'client' ? [['dashboard', 'grid', t('nav_home')], ['projects', 'folder', t('nav_myprojects')], ['requests', 'inbox', t('nav_requests')], ['contracts', 'contract', t('nav_contracts')], ['invoices', 'receipt', t('nav_invoices')], ['drive', 'drive', t('nav_myfiles')], ['settings', 'settings', t('nav_settings')]] : [['dashboard', 'grid', t('nav_home')], ['projects', 'folder', t('nav_assigned')], ['earnings', 'dollar', t('nav_earnings')], ['drive', 'drive', t('nav_files')], ['settings', 'settings', t('nav_settings')]];
+  const nav = role === 'admin' ? [['dashboard', 'grid', t('nav_dashboard')], ['projects', 'folder', t('nav_projects')], ['requests', 'inbox', t('nav_requests')], ['contracts', 'contract', t('nav_contracts')], ['invoices', 'receipt', t('nav_invoices')], ['payments', 'dollar', t('nav_payments')], ['accounting', 'activity', t('accounting')], ['calendar', 'cal', t('nav_calendar')], ['drive', 'drive', t('nav_drive')], ['users', 'users', t('nav_users')], ['settings', 'settings', t('nav_settings')]] : role === 'client' ? [['dashboard', 'grid', t('nav_home')], ['projects', 'folder', t('nav_myprojects')], ['requests', 'inbox', t('nav_requests')], ['contracts', 'contract', t('nav_contracts')], ['invoices', 'receipt', t('nav_invoices')], ['drive', 'drive', t('nav_myfiles')], ['settings', 'settings', t('nav_settings')]] : [['dashboard', 'grid', t('nav_home')], ['projects', 'folder', t('nav_assigned')], ['earnings', 'dollar', t('nav_earnings')], ['drive', 'drive', t('nav_files')], ['settings', 'settings', t('nav_settings')]];
   const titles = {
     dashboard: role === 'admin' ? t('nav_dashboard') : t('nav_home'),
     projects: role === 'client' ? t('nav_myprojects') : role === 'artist' ? t('nav_assigned') : t('nav_projects'),
@@ -7156,6 +7629,7 @@ function Shell({
     contracts: t('contractsTitle'),
     invoices: t('invoicesTitle'),
     payments: t('paymentsTitle'),
+    accounting: t('accounting'),
     earnings: t('nav_earnings'),
     calendar: t('calTitle'),
     drive: t('driveTitle'),
@@ -7354,6 +7828,8 @@ function Shell({
   })), page === 'payments' && React.createElement(Payments, {
     role: role,
     toast: toast
+  }), page === 'accounting' && React.createElement(Accounting, {
+    role: role
   }), page === 'earnings' && React.createElement(Payments, {
     role: role,
     toast: toast

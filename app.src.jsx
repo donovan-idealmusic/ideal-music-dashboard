@@ -85,7 +85,7 @@ const STRINGS={
     title:"Title",artistF:"Artist",clientF:"Client",priority:"Priority",deliveryDate:"Delivery date",progress:"Progress",status:"Status",
     signInSub:"Use your passkey to continue securely.",passkeyBtn:"Sign in with Passkey",faceTouch:"Face ID · Touch ID · security key",exploreDemo:"Explore the demo without signing in",verifying:"Verifying…",authed:"Authenticated",welcome:"Welcome back",chooseProfile:"Choose a profile to continue",endToEnd:"Private, anonymous & moderated by design",passkeyError:"Couldn't verify your passkey. Try again, or explore the demo.",tryAgain:"Try again",orEmail:"or",emailContinue:"Continue with email",emailPlaceholder:"you@email.com",sendLink:"Send sign-in link",checkEmail:"Check your email",checkEmailSub:"We sent a secure sign-in link to your inbox. Open it on this device to continue.",back:"Back",
     nav_myfiles:"My Files",myFilesTitle:"My Files",myFilesSub:"Your projects — view and download your files. Everything here is private to you.",downloadFiles:"Download files",preparing:"Preparing your download",driveSoon:"Your Google Drive folder will appear here once your project is set up.",noFilesYet:"No files yet.",openInvoice:"Open",created:"Created",overdue:"Overdue",invPending:"Pending & overdue",invHistory:"Paid history",invClientSub:"Your invoices — pending and overdue are shown first.",noPending:"You're all caught up — no pending invoices.",serviceType:"Service",
-    role_superadmin:"Super Admin",rd_superadmin:"Everything Admins can do — plus branding, roles and global settings.",loginScreen:"Login Screen",loginScreenSub:"Customize what visitors see on the sign-in screen. Only Super Admins can change this.",background:"Background",overlay:"Overlay",mediaUrl:"Media URL",uploadFile:"Upload file",fit:"Fit",loop:"Loop",intensity:"Intensity",speed:"Speed",opacityL:"Opacity",livePreview:"Live preview",resetDefault:"Reset to default",loginSaved:"Login screen updated",loginReset:"Reset to default.",
+    role_superadmin:"Super Admin",rd_superadmin:"Everything Admins can do — plus branding, roles and global settings.",loginScreen:"Login Screen",loginScreenSub:"Customize what visitors see on the sign-in screen. Only Super Admins can change this.",background:"Background",overlay:"Overlay",mediaUrl:"Media URL",uploadFile:"Upload file",fit:"Fit",loop:"Loop",intensity:"Intensity",speed:"Speed",opacityL:"Opacity",livePreview:"Live preview",resetDefault:"Reset to default",loginSaved:"Login screen updated",loginReset:"Reset to default.",accounting:"Accounting",accountingSub:"Money in and out, net balance and trends — updates as invoices change.",moneyIn:"Money in",moneyOut:"Money out",pendingIncome:"Pending income",netBalance:"Net balance",incomeVsExpense:"Income vs Expenses",paidVsPending:"Paid vs Pending",netEvolution:"Net balance over time",topClients:"Top clients",revenueByService:"Revenue by service",allClients:"All clients",allStatuses:"All statuses",p_day:"Day",p_week:"Week",p_month:"Month",p_quarter:"Quarter",p_year:"Year",p_custom:"Custom",
   },
   vi:{
     tagline:"Sản xuất âm nhạc, quản lý tinh tế.",pickRole:"Chọn vai trò để vào bản demo · 100% ẩn danh & kiểm duyệt",
@@ -1037,6 +1037,82 @@ function ClientInvoices({toast}){
   </div>;
 }
 
+/* ===== ACCOUNTING (admin / super admin) ===== */
+const ACCT_MONTHS=[{m:'Feb',in:8200,out:3100},{m:'Mar',in:10600,out:3800},{m:'Apr',in:9400,out:4200},{m:'May',in:12800,out:4600},{m:'Jun',in:15200,out:5100},{m:'Jul',in:14200,out:5600}];
+function AcctBars({data,h=190}){
+  const max=Math.max.apply(null,data.map(d=>Math.max(d.a,d.b)).concat([1]));
+  return <div className="ac-bars" style={{height:h}}>{data.map((d,i)=><div className="ac-barcol" key={i}>
+    <div className="ac-barpair">
+      <div className="ac-bar in" style={{height:(d.a/max*100)+'%',animationDelay:(i*0.06)+'s'}}/>
+      <div className="ac-bar out" style={{height:(d.b/max*100)+'%',animationDelay:(i*0.06+0.03)+'s'}}/>
+    </div><span className="ac-blabel">{d.label}</span></div>)}</div>;
+}
+function AcctArea({pts,h=160,color='#0a84ff'}){
+  const w=520;const max=Math.max.apply(null,pts.concat([1]));const min=Math.min.apply(null,pts.concat([0]));const rng=(max-min)||1;const step=w/((pts.length-1)||1);
+  const xy=pts.map((v,i)=>[i*step,h-8-((v-min)/rng)*(h-24)]);
+  const line=xy.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  const area=line+' L '+w+' '+h+' L 0 '+h+' Z';
+  return <svg className="ac-area" viewBox={'0 0 '+w+' '+h} preserveAspectRatio="none">
+    <defs><linearGradient id="acg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={color} stopOpacity="0.28"/><stop offset="1" stopColor={color} stopOpacity="0"/></linearGradient></defs>
+    <path d={area} fill="url(#acg)" className="ac-areafill"/>
+    <path d={line} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="ac-arealine"/>
+  </svg>;
+}
+function AcctDonut({paid,pending,overdue}){
+  const tot=paid+pending+overdue||1;const R=54,C=2*Math.PI*R;
+  const seg=(v,off,col)=>{const len=v/tot*C;return <circle cx="70" cy="70" r={R} fill="none" stroke={col} strokeWidth="18" strokeDasharray={len+' '+(C-len)} strokeDashoffset={-off} transform="rotate(-90 70 70)"/>;};
+  return <svg width="140" height="140" viewBox="0 0 140 140" className="ac-donut-svg"><circle cx="70" cy="70" r={R} fill="none" stroke="var(--sep)" strokeWidth="18"/>
+    {seg(paid,0,'#34c759')}{seg(pending,paid/tot*C,'#ff9f0a')}{seg(overdue,(paid+pending)/tot*C,'#ff3b30')}
+    <text x="70" y="66" textAnchor="middle" fontSize="15" fontWeight="700" fill="var(--text)">{Math.round(paid/tot*100)}%</text>
+    <text x="70" y="83" textAnchor="middle" fontSize="9" letterSpacing="1" fill="var(--text-3)">PAID</text></svg>;
+}
+function AcctHBars({rows,color}){
+  const max=Math.max.apply(null,rows.map(r=>r.v).concat([1]));
+  return <div className="ac-hbars">{rows.map((r,i)=><div className="ac-hrow" key={i}>
+    <span className="ac-hlabel">{r.label}</span>
+    <div className="ac-htrack"><div className="ac-hfill" style={{width:(r.v/max*100)+'%',background:color,animationDelay:(i*0.08)+'s'}}/></div>
+    <span className="ac-hval">{fmt(r.v)}</span></div>)}</div>;
+}
+function Accounting({role}){
+  const{t}=useT();const[period,setPeriod]=useState('month');const[client,setClient]=useState('all');const[status,setStatus]=useState('all');
+  const inc=INVOICES.map(iv=>({client:iv.clientName,amount:invTotal(iv),paid:iv.paid,status:iv.status}));
+  const fInc=inc.filter(x=>(client==='all'||x.client===client)&&(status==='all'||x.status===status));
+  const outstanding=fInc.reduce((a,x)=>a+(x.amount-x.paid),0);
+  const collected=fInc.reduce((a,x)=>a+x.paid,0);
+  const overdue=INVOICES.filter(iv=>iv.status!=='paid'&&parseDue(iv.due)<TODAY&&(client==='all'||iv.clientName===client)).reduce((a,iv)=>a+(invTotal(iv)-iv.paid),0);
+  const totalIn=ACCT_MONTHS.reduce((a,m)=>a+m.in,0),totalOut=ACCT_MONTHS.reduce((a,m)=>a+m.out,0),net=totalIn-totalOut;
+  let bars=ACCT_MONTHS.map(m=>({label:m.m,a:m.in,b:m.out}));
+  if(period==='quarter')bars=[{label:'Q1',a:ACCT_MONTHS.slice(0,3).reduce((s,m)=>s+m.in,0),b:ACCT_MONTHS.slice(0,3).reduce((s,m)=>s+m.out,0)},{label:'Q2',a:ACCT_MONTHS.slice(3).reduce((s,m)=>s+m.in,0),b:ACCT_MONTHS.slice(3).reduce((s,m)=>s+m.out,0)}];
+  if(period==='year')bars=[{label:'2026',a:totalIn,b:totalOut}];
+  if(period==='week')bars=[['W1',3200,1100],['W2',3800,1300],['W3',3600,1250],['W4',3600,1950]].map(x=>({label:x[0],a:x[1],b:x[2]}));
+  if(period==='day')bars=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d,i)=>({label:d,a:[520,610,480,720,900,300,240][i],b:[180,210,160,240,300,90,70][i]}));
+  const netSeries=[];ACCT_MONTHS.reduce((p,m)=>{const v=p+(m.in-m.out);netSeries.push(v);return v;},0);
+  const paidAmt=fInc.filter(x=>x.status==='paid').reduce((a,x)=>a+x.amount,0);
+  const pendAmt=fInc.filter(x=>x.status!=='paid').reduce((a,x)=>a+(x.amount-x.paid),0);
+  const byClient={};inc.forEach(x=>{byClient[x.client]=(byClient[x.client]||0)+x.amount;});
+  const topClients=Object.keys(byClient).map(k=>({label:k,v:byClient[k]})).sort((a,b)=>b.v-a.v).slice(0,5);
+  const bySvc=[{label:'Mixing & Mastering',v:21800},{label:'Mastering',v:12400},{label:'Production',v:9600}];
+  const clients=['all'].concat(Object.keys(byClient));
+  const kpis=[{label:t('moneyIn'),v:fmt(totalIn),c:'#34c759',ic:'down'},{label:t('moneyOut'),v:fmt(totalOut),c:'#ff3b30',ic:'up'},{label:t('pendingIncome'),v:fmt(outstanding),c:'#ff9f0a',ic:'clock'},{label:t('netBalance'),v:fmt(net),c:'#0a84ff',ic:'activity'},{label:t('inv_paid'),v:fmt(collected),c:'#5e5ce6',ic:'check'},{label:t('overdue'),v:fmt(overdue),c:'#ff2d55',ic:'bell'}];
+  return <div className="view content">
+    <div className="h-row"><div><h1 style={{display:'flex',alignItems:'center',gap:10}}><I.dollar style={{width:26,height:26,color:'var(--green)'}}/>{t('accounting')}</h1><p>{t('accountingSub')}</p></div></div>
+    <div className="ac-filters">
+      <div className="seg ac-period">{[['day',t('p_day')],['week',t('p_week')],['month',t('p_month')],['quarter',t('p_quarter')],['year',t('p_year')],['custom',t('p_custom')]].map(x=><button key={x[0]} className={period===x[0]?'on':''} onClick={()=>setPeriod(x[0])}>{x[1]}</button>)}</div>
+      <select value={client} onChange={e=>setClient(e.target.value)}>{clients.map(c=><option key={c} value={c}>{c==='all'?t('allClients'):c}</option>)}</select>
+      <select value={status} onChange={e=>setStatus(e.target.value)}><option value="all">{t('allStatuses')}</option><option value="paid">{t('inv_paid')}</option><option value="sent">{t('inv_sent')}</option><option value="partial">{t('inv_partial')}</option></select>
+      <select><option>USD ($)</option><option>VND (₫)</option><option>INR (₹)</option></select>
+    </div>
+    <div className="ac-kpis stagger">{kpis.map((k,i)=><div className="ac-kpi" key={i}><div className="ac-kpi-ic" style={{background:k.c+'22',color:k.c}}>{I[k.ic]({style:{width:18,height:18}})}</div><div><div className="ac-kpi-v">{k.v}</div><div className="ac-kpi-l">{k.label}</div></div></div>)}</div>
+    <div className="ac-charts">
+      <div className="card solid ac-chart-wide"><div className="ac-ch-head"><b>{t('incomeVsExpense')}</b><div className="ac-legend"><span><i style={{background:'#34c759'}}/>{t('moneyIn')}</span><span><i style={{background:'#ff3b30'}}/>{t('moneyOut')}</span></div></div><AcctBars data={bars}/></div>
+      <div className="card solid"><div className="ac-ch-head"><b>{t('paidVsPending')}</b></div><div className="ac-donut-wrap"><AcctDonut paid={paidAmt} pending={pendAmt} overdue={overdue}/><div className="ac-donut-legend"><span><i style={{background:'#34c759'}}/>{t('inv_paid')} · {fmt(paidAmt)}</span><span><i style={{background:'#ff9f0a'}}/>{t('st_pending')} · {fmt(pendAmt)}</span><span><i style={{background:'#ff3b30'}}/>{t('overdue')} · {fmt(overdue)}</span></div></div></div>
+      <div className="card solid ac-chart-wide"><div className="ac-ch-head"><b>{t('netEvolution')}</b><span className="ac-net-big">{fmt(net)}</span></div><AcctArea pts={netSeries}/></div>
+      <div className="card solid"><div className="ac-ch-head"><b>{t('topClients')}</b></div><AcctHBars rows={topClients} color="#5e5ce6"/></div>
+      <div className="card solid"><div className="ac-ch-head"><b>{t('revenueByService')}</b></div><AcctHBars rows={bySvc} color="#0a84ff"/></div>
+    </div>
+  </div>;
+}
+
 function Shell({role,setRole,isSuper,lang,setLang,theme,setTheme}){
   const{t}=useT();
   const[page,setPage]=useState('dashboard');const[activeProject,setActiveProject]=useState(null);
@@ -1045,11 +1121,11 @@ function Shell({role,setRole,isSuper,lang,setLang,theme,setTheme}){
   useEffect(()=>{const h=(e)=>{if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();setCmdk(v=>!v);}if(e.key==='Escape'){setCmdk(false);setNotif(false);setNewP(false);}};window.addEventListener('keydown',h);return()=>window.removeEventListener('keydown',h);},[]);
   const go=(p,proj)=>{if(p==='new'){setNewP(true);return;}if(p==='project'){setActiveProject(proj);setPage('project');return;}setPage(p);setActiveProject(null);setNotif(false);};
   const nav=role==='admin'
-    ?[['dashboard','grid',t('nav_dashboard')],['projects','folder',t('nav_projects')],['requests','inbox',t('nav_requests')],['contracts','contract',t('nav_contracts')],['invoices','receipt',t('nav_invoices')],['payments','dollar',t('nav_payments')],['calendar','cal',t('nav_calendar')],['drive','drive',t('nav_drive')],['users','users',t('nav_users')],['settings','settings',t('nav_settings')]]
+    ?[['dashboard','grid',t('nav_dashboard')],['projects','folder',t('nav_projects')],['requests','inbox',t('nav_requests')],['contracts','contract',t('nav_contracts')],['invoices','receipt',t('nav_invoices')],['payments','dollar',t('nav_payments')],['accounting','activity',t('accounting')],['calendar','cal',t('nav_calendar')],['drive','drive',t('nav_drive')],['users','users',t('nav_users')],['settings','settings',t('nav_settings')]]
     :role==='client'
     ?[['dashboard','grid',t('nav_home')],['projects','folder',t('nav_myprojects')],['requests','inbox',t('nav_requests')],['contracts','contract',t('nav_contracts')],['invoices','receipt',t('nav_invoices')],['drive','drive',t('nav_myfiles')],['settings','settings',t('nav_settings')]]
     :[['dashboard','grid',t('nav_home')],['projects','folder',t('nav_assigned')],['earnings','dollar',t('nav_earnings')],['drive','drive',t('nav_files')],['settings','settings',t('nav_settings')]];
-  const titles={dashboard:role==='admin'?t('nav_dashboard'):t('nav_home'),projects:role==='client'?t('nav_myprojects'):role==='artist'?t('nav_assigned'):t('nav_projects'),requests:t('requestsTitle'),contracts:t('contractsTitle'),invoices:t('invoicesTitle'),payments:t('paymentsTitle'),earnings:t('nav_earnings'),calendar:t('calTitle'),drive:t('driveTitle'),users:t('usersTitle'),settings:t('settingsTitle'),project:activeProject?activeProject.title:''};
+  const titles={dashboard:role==='admin'?t('nav_dashboard'):t('nav_home'),projects:role==='client'?t('nav_myprojects'):role==='artist'?t('nav_assigned'):t('nav_projects'),requests:t('requestsTitle'),contracts:t('contractsTitle'),invoices:t('invoicesTitle'),payments:t('paymentsTitle'),accounting:t('accounting'),earnings:t('nav_earnings'),calendar:t('calTitle'),drive:t('driveTitle'),users:t('usersTitle'),settings:t('settingsTitle'),project:activeProject?activeProject.title:''};
   const prof=PROFILES[role];const subt={admin:t('workspace'),client:t('portal'),artist:t('studio')}[role];
   return <div className="shell">
     <aside className="sidebar">
@@ -1077,6 +1153,7 @@ function Shell({role,setRole,isSuper,lang,setLang,theme,setTheme}){
       {page==='contracts'&&<Contracts role={role} toast={toast}/>}
       {page==='invoices'&&(role==='client'?<ClientInvoices toast={toast}/>:<Invoices role={role} toast={toast}/>)}
       {page==='payments'&&<Payments role={role} toast={toast}/>}
+      {page==='accounting'&&<Accounting role={role}/>}
       {page==='earnings'&&<Payments role={role} toast={toast}/>}
       {page==='calendar'&&<Calendar/>}
       {page==='drive'&&(role==='client'?<MyFiles role={role} toast={toast}/>:<DriveView role={role} toast={toast}/>)}

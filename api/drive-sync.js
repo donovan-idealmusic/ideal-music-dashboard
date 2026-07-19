@@ -62,13 +62,13 @@ async function findChild(token, parent, name, folderOnly) {
   const esc = String(name).replace(/'/g, "\\'");
   let q = `name = '${esc}' and '${parent}' in parents and trashed = false`;
   if (folderOnly) q += " and mimeType = 'application/vnd.google-apps.folder'";
-  const j = await drive(token, 'files?q=' + encodeURIComponent(q) + '&fields=files(id,name)');
+  const j = await drive(token, 'files?q=' + encodeURIComponent(q) + '&fields=files(id,name)&supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives');
   return (j.files && j.files[0]) || null;
 }
 async function ensureFolder(token, parent, name) {
   const found = await findChild(token, parent, name, true);
   if (found) return found.id;
-  const j = await drive(token, 'files?fields=id', {
+  const j = await drive(token, 'files?fields=id&supportsAllDrives=true', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', parents: [parent] }),
@@ -76,7 +76,7 @@ async function ensureFolder(token, parent, name) {
   return j.id;
 }
 async function renameItem(token, id, name) {
-  return drive(token, 'files/' + id + '?fields=id,name', {
+  return drive(token, 'files/' + id + '?fields=id,name&supportsAllDrives=true', {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name }),
@@ -120,7 +120,7 @@ export default async function handler(req, res) {
     }
     if (body.action === 'uploadInit') {
       if (!body.folderId || !body.name) return res.status(400).json({ error: 'folderId + name required' });
-      const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable', {
+      const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true', {
         method: 'POST',
         headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: body.name, parents: [body.folderId] }),

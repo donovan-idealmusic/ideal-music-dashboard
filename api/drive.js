@@ -41,13 +41,13 @@ async function getAccessToken(sa) {
 
 async function listFolder(token, folderId) {
   const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
-  const r = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,mimeType)&pageSize=500`,
+  const r = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,mimeType)&pageSize=500&supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives`,
     { headers: { Authorization: 'Bearer ' + token } });
   const j = await r.json();
   return j.files || [];
 }
 async function download(token, id) {
-  const r = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`,
+  const r = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media&supportsAllDrives=true`,
     { headers: { Authorization: 'Bearer ' + token } });
   return Buffer.from(await r.arrayBuffer());
 }

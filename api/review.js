@@ -355,8 +355,11 @@ export default async function handler(req, res) {
         folderId = await driveEnsureFolder(token, projFolder, 'Masters');
         await db(`projects?id=eq.${s.project_id}`, { method: 'PATCH', body: { drive_folder_id: folderId } });
       }
+      // Reflect the dashboard origin so Google enables CORS on the resumable session
+      // (lets the browser PUT the bytes straight to Drive without a preflight failure).
+      const origin = (req.headers.origin) || 'https://dashboard.ideal-music.net';
       const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true', {
-        method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json', Origin: origin },
         body: JSON.stringify({ name: body.filename || 'demo.mp3', parents: [folderId], mimeType: body.mime || 'audio/mpeg' }),
       });
       const uploadUrl = r.headers.get('location');

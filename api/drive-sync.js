@@ -120,9 +120,11 @@ export default async function handler(req, res) {
     }
     if (body.action === 'uploadInit') {
       if (!body.folderId || !body.name) return res.status(400).json({ error: 'folderId + name required' });
+      // reflect the caller's origin so Google enables CORS on the resumable session (browser PUT)
+      const origin = (req.headers.origin) || 'https://dashboard.ideal-music.net';
       const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true', {
         method: 'POST',
-        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json', Origin: origin },
         body: JSON.stringify({ name: body.name, parents: [body.folderId] }),
       });
       const uploadUrl = r.headers.get('location');

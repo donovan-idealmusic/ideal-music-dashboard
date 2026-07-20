@@ -465,10 +465,20 @@ function Dashboard({role,go,name}){
 }
 
 /* ===== PROJECTS ===== */
-function Projects({role,go}){
+function Projects({role,go,toast}){
   const{t}=useT();const[view,setView]=useState('kanban');const[fav,setFav]=useState({3:true});
+  const[dl,setDl]=useState(null);const[real,setReal]=useState([]);
+  useEffect(()=>{ (async()=>{ try{ const j=await rv('listMine'); setReal(j.items||[]); }catch(e){} })(); },[]);
   const list=myProjects(role);const cols=['pending','progress','review','approved','delivered'];
+  const openDl=(p)=>setDl({submissionId:p&&p.submissionId,title:(p&&p.title)||'Project'});
   return <div className="view content">
+    {real.length>0&&<div style={{marginBottom:20}}>
+      <div className="navlabel" style={{padding:'0 0 9px'}}>Your projects · files in Drive</div>
+      <div className="rs-list">{real.map(it=><div key={it.submission_id} className="rs-subcard" style={{cursor:'default'}}>
+        <div className="rs-sc-top"><div className="rs-sc-ic"><I.note style={{width:20,height:20}}/></div><div style={{minWidth:0,flex:1}}><h4>{it.project_title}</h4><div className="rs-sc-meta"><span className="rs-dot" style={{background:STATUS_COLOR[it.status]||'var(--text-3)'}}/>{STATUS_LABEL[it.status]||it.status} · {it.versions_count} version{it.versions_count===1?'':'s'}</div></div></div>
+        <div style={{display:'flex',gap:8,marginTop:4}}><button className="btn ghost sm" style={{flex:1,justifyContent:'center'}} onClick={()=>go('review')}><I.chat style={{width:14,height:14}}/>Review</button><button className="btn sm" style={{flex:1,justifyContent:'center'}} onClick={()=>setDl({submissionId:it.submission_id,title:it.project_title})}><I.down style={{width:14,height:14}}/>Download</button></div>
+      </div>)}</div>
+    </div>}
     <div className="h-row"><div><h1>{t('nav_projects')}</h1><p>{list.length} {t('projectsCount')} · {role==='client'?t('clientHidden'):role==='artist'?t('artistHidden'):t('fullMgmt')}</p></div>
       <div style={{display:'flex',gap:12,alignItems:'center'}}>
         <div className="seg"><button className={view==='kanban'?'on':''} onClick={()=>setView('kanban')}>{t('kanban')}</button><button className={view==='list'?'on':''} onClick={()=>setView('list')}>{t('list')}</button></div>
@@ -478,7 +488,7 @@ function Projects({role,go}){
       {items.map(p=><div className="kancard" key={p.id} onClick={()=>go('project',p)}>
         <Cover grad={p.grad}/>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}><h4>{p.title}</h4>
-          <button onClick={(e)=>{e.stopPropagation();setFav({...fav,[p.id]:!fav[p.id]});}} style={{color:fav[p.id]?'var(--orange)':'var(--text-3)'}}>{fav[p.id]?<I.starF style={{width:16,height:16}}/>:<I.star style={{width:16,height:16}}/>}</button></div>
+          <div style={{display:'flex',alignItems:'center',gap:2}}><button onClick={(e)=>{e.stopPropagation();openDl(p);}} style={{color:'var(--text-3)'}} title="Download files"><I.down style={{width:15,height:15}}/></button><button onClick={(e)=>{e.stopPropagation();setFav({...fav,[p.id]:!fav[p.id]});}} style={{color:fav[p.id]?'var(--orange)':'var(--text-3)'}}>{fav[p.id]?<I.starF style={{width:16,height:16}}/>:<I.star style={{width:16,height:16}}/>}</button></div></div>
         <div style={{fontSize:12,color:'var(--text-3)'}}>{p.sub}</div>
         <div className="progressbar" style={{marginTop:10}}><i style={{width:p.prog+'%'}}/></div>
         <div className="kmeta"><Pri p={p.pri}/><span style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:4}}><I.cal style={{width:13,height:13}}/>{p.due}</span></div>
@@ -489,7 +499,8 @@ function Projects({role,go}){
         <td>{role==='admin'?p.artistName:<span className="anon-tag"><I.lock style={{width:11,height:11}}/>{t('anonymous')}</span>}</td>
         <td><Pill s={p.status}/></td><td><Pri p={p.pri}/></td>
         <td><div style={{display:'flex',alignItems:'center',gap:8}}><div className="progressbar" style={{width:70}}><i style={{width:p.prog+'%'}}/></div><span style={{fontSize:12,color:'var(--text-3)'}}>{p.prog}%</span></div></td>
-        <td style={{fontWeight:560,color:p.pri==='urgent'?'var(--red)':'inherit'}}>{p.due}</td></tr>)}</tbody></table></div>}
+        <td style={{fontWeight:560,color:p.pri==='urgent'?'var(--red)':'inherit'}}>{p.due} <button onClick={(e)=>{e.stopPropagation();openDl(p);}} style={{color:'var(--text-3)',marginLeft:6,verticalAlign:'middle'}} title="Download files"><I.down style={{width:14,height:14}}/></button></td></tr>)}</tbody></table></div>}
+    {dl&&<DownloadPopup submissionId={dl.submissionId} title={dl.title} close={()=>setDl(null)} toast={toast||(()=>{})}/>}
   </div>;
 }
 /* ===== PROJECT DETAIL ===== */
@@ -1378,7 +1389,14 @@ function DownloadPopup({submissionId,title,close,toast}){
   const [opts,setOpts]=useState(null);
   const [sel,setSel]=useState({masters:true,stems:false,contracts:false});
   const [busy,setBusy]=useState(false);
-  useEffect(()=>{ (async()=>{ try{ const j=await rv('downloadOptions',{submission_id:submissionId}); const o=j.options||{masters:true,stems:false,contracts:false}; setOpts(o); setSel({masters:!!o.masters,stems:false,contracts:false}); }catch(e){ setOpts({masters:true,stems:false,contracts:false}); } })(); },[]);
+  const [noAccess,setNoAccess]=useState(false);
+  useEffect(()=>{ (async()=>{ if(!submissionId){ setNoAccess(true); setOpts({}); return; } try{ const j=await rv('downloadOptions',{submission_id:submissionId}); if(!j.options){ setNoAccess(true); setOpts({}); return; } setOpts(j.options); setSel({masters:!!j.options.masters,stems:false,contracts:false}); }catch(e){ setNoAccess(true); setOpts({}); } })(); },[]);
+  if(noAccess) return <div className="rs-dlg-back" onClick={close}><div className="rs-dlg" onClick={e=>e.stopPropagation()} style={{maxWidth:380,textAlign:'center'}}>
+    <div style={{width:52,height:52,borderRadius:15,margin:'2px auto 12px',background:'var(--sep)',display:'flex',alignItems:'center',justifyContent:'center'}}><I.folder style={{width:24,height:24,color:'var(--text-3)'}}/></div>
+    <h3 style={{fontSize:17}}>No files to download yet</h3>
+    <div className="sub" style={{marginBottom:14}}>{title} isn’t connected to Google Drive, or has no files uploaded yet.</div>
+    <button className="btn ghost" style={{width:'100%',justifyContent:'center'}} onClick={close}>Close</button>
+  </div></div>;
   const rows=[['masters','Masters','Final mixed masters','note'],['stems','Stems','Individual track stems','grid'],['contracts','Contracts','Agreements & invoices','contract']];
   const toggle=(k)=>{ if(opts&&!opts[k])return; setSel(s=>Object.assign({},s,{[k]:!s[k]})); };
   const chosen=rows.map(r=>r[0]).filter(k=>sel[k]);
@@ -1599,7 +1617,7 @@ function Shell({role,setRole,isSuper,lang,setLang,theme,setTheme}){
           {NOTIFS.map((n,i)=><div className="notif" key={i}>{n.unread?<span className="nd"/>:<span style={{width:8,flex:'0 0 8px'}}/>}<div><div style={{fontSize:13,lineHeight:1.4}}>{n.text}</div><div style={{fontSize:11.5,color:'var(--text-3)',marginTop:3}}>{n.time}</div></div></div>)}</div>}
       </header>
       {page==='dashboard'&&<Dashboard role={role} go={go} name={prof.name}/>}
-      {page==='projects'&&<Projects role={role} go={go}/>}
+      {page==='projects'&&<Projects role={role} go={go} toast={toast}/>}
       {page==='review'&&<ReviewStudio role={role} toast={toast}/>}
       {page==='project'&&activeProject&&<ProjectDetail p={activeProject} role={role} go={go} toast={toast}/>}
       {page==='requests'&&<Requests role={role} toast={toast}/>}

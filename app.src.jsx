@@ -1389,8 +1389,11 @@ function ReviewStudio({role,toast}){
   const [flash,setFlash]=useState('');
   const [revSummary,setRevSummary]=useState('');
   const [uploadPct,setUploadPct]=useState(-1);
+  const [vfilter,setVfilter]=useState('all');
   const posRef=useRef({});
   const fileRef=useRef(null);
+  const RsSwitch=({on,disabled,onClick})=><button disabled={disabled} onClick={onClick} style={{width:42,height:25,borderRadius:13,background:on?'var(--green)':'var(--sep-strong)',position:'relative',transition:'background .2s',flex:'0 0 42px',cursor:disabled?'default':'pointer',opacity:disabled?.55:1}}><span style={{position:'absolute',top:2,left:on?19:2,width:21,height:21,borderRadius:'50%',background:'#fff',transition:'left .2s',boxShadow:'0 1px 3px rgba(0,0,0,.3)'}}/></button>;
+  const toggleMsg=async(key,val)=>{ try{ await rv('setMessaging',{project_id:sub.project_id,[key]:val}); await loadThread(sub.submission_id); toast('✓ Messaging updated'); }catch(e){ toast('✗ '+(e.message||'Error')); } };
 
   const loadList=async()=>{ setErr(''); try{ const j=await rv('listMine'); setItems(j.items||[]); }catch(e){ setErr(e.status===401?'signin':(e.message||'error')); setItems([]); } };
   const loadThread=async(sid)=>{ try{ const j=await rv('listThread',{submission_id:sid}); setThread(j); const cur=j.submission&&j.submission.current_version; setSelVer(cur||(j.versions.length?j.versions[j.versions.length-1].id:null)); }catch(e){ toast('✗ '+(e.message||'Error')); } };
@@ -1402,6 +1405,10 @@ function ReviewStudio({role,toast}){
   const ver=selIdx>=0?versions[selIdx]:null;
   const prevVer=selIdx>0?versions[selIdx-1]:null;
   const subInfo=thread?thread.submission:null;
+  const messaging=thread&&thread.messaging?thread.messaging:{};
+  const canMessage=!!messaging.can_message;
+  const isApproved=(v)=>v.decision==='approved'||(subInfo&&v.id===subInfo.approved_version);
+  const railVersions=vfilter==='approved'?versions.filter(isApproved):versions;
   const verFeedback=thread?thread.feedback.filter(f=>f.version_id===selVer):[];
   const verItems=thread?thread.items.filter(x=>x.version_id===selVer):[];
   const verComments=thread?thread.comments.filter(c=>c.version_id===selVer):[];
@@ -1455,8 +1462,9 @@ function ReviewStudio({role,toast}){
 
   // ── thread view (version rail + player + feedback) ──
   const statusPill=(s)=><span className="rs-badge" style={{background:(STATUS_COLOR[s]||'var(--text-3)')+'22',color:STATUS_COLOR[s]||'var(--text-3)'}}>{STATUS_LABEL[s]||s}</span>;
-  const railPane=<div className="rs-pane rail" style={{display:tab==='versions'?'block':undefined}}><div className="rs-rail"><div className="rs-rail-h">Versions</div>
-    {versions.map(v=>{ const isCur=subInfo&&v.id===subInfo.current_version; const isAppr=subInfo&&v.id===subInfo.approved_version; const pc={ready:'var(--green)',processing:'var(--orange)',uploading:'var(--orange)',syncing:'var(--orange)',missing:'var(--red)',permission:'var(--red)',error:'var(--red)'}[v.processing_status]||'var(--text-3)';
+  const railPane=<div className="rs-pane rail" style={{display:tab==='versions'?'block':undefined}}><div className="rs-rail"><div className="rs-rail-h" style={{display:'flex',alignItems:'center',gap:6}}>Versions<div style={{marginLeft:'auto',display:'flex',gap:2,background:'var(--sep)',borderRadius:8,padding:2}}><button onClick={()=>setVfilter('all')} style={{fontSize:10.5,fontWeight:640,padding:'3px 9px',borderRadius:6,background:vfilter==='all'?'var(--card-solid)':'transparent',color:vfilter==='all'?'var(--text)':'var(--text-3)'}}>All</button><button onClick={()=>setVfilter('approved')} style={{fontSize:10.5,fontWeight:640,padding:'3px 9px',borderRadius:6,background:vfilter==='approved'?'var(--card-solid)':'transparent',color:vfilter==='approved'?'var(--green)':'var(--text-3)'}}>Approved</button></div></div>
+    {railVersions.length===0&&<div style={{padding:'18px 8px',fontSize:12,color:'var(--text-3)',textAlign:'center',lineHeight:1.5}}>No approved versions yet.<br/>Approve a demo to collect it here.</div>}
+    {railVersions.map(v=>{ const isCur=subInfo&&v.id===subInfo.current_version; const isAppr=subInfo&&v.id===subInfo.approved_version; const pc={ready:'var(--green)',processing:'var(--orange)',uploading:'var(--orange)',syncing:'var(--orange)',missing:'var(--red)',permission:'var(--red)',error:'var(--red)'}[v.processing_status]||'var(--text-3)';
       return <button key={v.id} className={"rs-vitem"+(v.id===selVer?" sel":"")} onClick={()=>{setSelVer(v.id);setTab('player');}}>
         <div className="rs-vtop"><span className="rs-vno">V{v.version_no}</span>{isCur&&<span className="rs-badge current">Current</span>}{isAppr&&<span className="rs-badge approved">Approved</span>}<span style={{marginLeft:'auto'}}>{statusPill(v.decision||(isCur?subInfo.status:'submitted'))}</span></div>
         {v.original_filename&&<div className="rs-vname">{v.original_filename}</div>}
@@ -1468,7 +1476,7 @@ function ReviewStudio({role,toast}){
   const playerPane=<div className="rs-pane" style={{display:(tab==='player')?undefined:'none'}}><div className="rs-main">
     <div style={{position:'relative'}}>
       <div className="rs-player" style={{marginBottom:0}}>
-        <div className="rs-pl-head"><div style={{minWidth:0,flex:1}}><div className="rs-pl-title">Version {ver?ver.version_no:'—'}{ver&&subInfo&&ver.id===subInfo.approved_version?' · Approved':''}</div>{ver&&ver.original_filename&&<div className="rs-pl-file">{ver.original_filename}{ver.size_bytes?' · '+rsBytes(ver.size_bytes):''}</div>}</div>{ver&&statusPill(ver.decision||(subInfo&&ver.id===subInfo.current_version?subInfo.status:'submitted'))}</div>
+        <div className="rs-pl-head"><div style={{minWidth:0,flex:1}}><div style={{fontSize:11,fontWeight:640,color:'var(--accent-2)',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:3,display:'flex',alignItems:'center',gap:5}}><I.note style={{width:12,height:12}}/>{sub.project_title}</div><div className="rs-pl-title">Version {ver?ver.version_no:'—'}{ver&&subInfo&&ver.id===subInfo.approved_version?' · Approved':''}</div>{ver&&ver.original_filename&&<div className="rs-pl-file">{ver.original_filename}{ver.size_bytes?' · '+rsBytes(ver.size_bytes):''}</div>}</div>{ver&&statusPill(ver.decision||(subInfo&&ver.id===subInfo.current_version?subInfo.status:'submitted'))}</div>
       </div>
       {ver&&(ver.has_audio?<div style={{marginTop:-2}}><DriveAudioPlayer versionId={ver.id} versionNo={ver.version_no} posRef={posRef} onEnded={()=>{}}/></div>
         :<div className="rs-player"><div className="rs-state"><div className="rs-spin"/><h5>{PROC_LABEL[ver.processing_status]||'Processing audio'}</h5><div className="rs-proc-bar"><i/></div><p>This version is being prepared. It will start playing automatically once Drive finishes.</p></div></div>)}
@@ -1498,12 +1506,16 @@ function ReviewStudio({role,toast}){
       {verItems.length>0&&<div style={{marginBottom:8}}>{verItems.map(it=><div key={it.id} style={{display:'flex',gap:8,alignItems:'flex-start',padding:'5px 0',fontSize:12.5}}><span className="rs-dot" style={{marginTop:5,background:it.level==='required'?'var(--red)':it.level==='optional'?'var(--text-3)':'var(--orange)'}}/><div><b style={{textTransform:'capitalize'}}>{it.category||'Note'}: </b>{it.body}</div></div>)}</div>}
       {verComments.map(c=><div key={c.id} className="rs-cmt"><span className="ts">{rsTime(c.ts_sec)}</span><p>{c.body}</p></div>)}
     </div>
-    <div className="rs-card"><h5>Messages</h5>
+    {isStaff&&<div className="rs-card"><h5>Messaging<span className="rs-vtag" style={{background:'var(--sep)',color:'var(--text-3)'}}>admin</span></h5>
+      <div style={{display:'flex',alignItems:'flex-start',gap:10,padding:'6px 0'}}><div style={{flex:1}}><div style={{fontSize:13,fontWeight:560}}>Client messaging</div><div style={{fontSize:11.5,color:'var(--text-3)',marginTop:1,lineHeight:1.4}}>Off by default — clients only see the decision buttons.</div></div><RsSwitch on={!!messaging.enabled} onClick={()=>toggleMsg('messaging_enabled',!messaging.enabled)}/></div>
+      <div style={{display:'flex',alignItems:'flex-start',gap:10,padding:'6px 0',opacity:messaging.enabled?1:.5}}><div style={{flex:1}}><div style={{fontSize:13,fontWeight:560}}>Allow artist to message</div><div style={{fontSize:11.5,color:'var(--text-3)',marginTop:1,lineHeight:1.4}}>Lets the assigned artist reply too.</div></div><RsSwitch on={!!messaging.artist_enabled} disabled={!messaging.enabled} onClick={()=>toggleMsg('artist_messaging_enabled',!messaging.artist_enabled)}/></div>
+    </div>}
+    {(canMessage||(thread&&thread.messages.length>0))&&<div className="rs-card"><h5>Messages</h5>
       {thread&&thread.messages.length===0?<p style={{fontSize:12.5,color:'var(--text-3)'}}>No messages yet.</p>:null}
       {thread&&thread.messages.map(m=><div key={m.id} style={{padding:'7px 0',borderBottom:'1px solid var(--sep)'}}><div style={{fontSize:11,fontWeight:640,color:'var(--text-2)',textTransform:'capitalize'}}>{m.sender_role}</div><p style={{fontSize:12.5,lineHeight:1.5,marginTop:2}}>{m.body}</p></div>)}
-      <div className="rs-msg"><input placeholder="Message (no contact info)" value={msg} onChange={(e)=>setMsg(e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter')doSend();}}/><button className="btn sm" disabled={busy||!msg.trim()} onClick={doSend}>Send</button></div>
-      {msg.trim()&&!screenMsg(msg)&&<div className="rs-warn"><I.x style={{width:13,height:13,flex:'0 0 13px',marginTop:1}}/>Blocked: personal contact details can't be shared.</div>}
-    </div>
+      {canMessage&&<><div className="rs-msg"><input placeholder="Message (no contact info)" value={msg} onChange={(e)=>setMsg(e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter')doSend();}}/><button className="btn sm" disabled={busy||!msg.trim()} onClick={doSend}>Send</button></div>
+      {msg.trim()&&!screenMsg(msg)&&<div className="rs-warn"><I.x style={{width:13,height:13,flex:'0 0 13px',marginTop:1}}/>Blocked: personal contact details can't be shared.</div>}</>}
+    </div>}
   </div></div>;
 
   return <div className="view content"><div className="rs"><div className="rs-wrap">

@@ -104,6 +104,34 @@ function coarseRole(uid, project, meRole) {
   return 'team';
 }
 
+// On approval, place the approved file into a dedicated "Approved" Drive folder
+// (a second folder holding only approved demos). Best-effort; never blocks the decision.
+async function copyToApproved(db, s, vId) {
+  if (!process.env.GOOGLE_SA_KEY || !vId) return;
+  const vr = await db(`submission_versions?id=eq.${vId}&select=drive_file_id,original_filename,version_no`);
+  const v = vr && vr[0];
+  if (!v || !v.drive_file_id) return;
+  const token = await driveToken('https://www.googleapis.com/auth/drive');
+  let approved = s.project && s.project.approved_folder_id;
+  if (!approved) {
+    let projectFolder = null;
+    if (s.project && s.project.drive_folder_id) {
+      const g = await driveApi(token, 'files/' + s.project.drive_folder_id + '?fields=parents&supportsAllDrives=true');
+      projectFolder = g.j && g.j.parents && g.j.parents[0];
+    }
+    if (!projectFolder && process.env.DRIVE_ROOT_FOLDER) {
+      projectFolder = await driveEnsureFolder(token, process.env.DRIVE_ROOT_FOLDER, (s.project && s.project.title) || 'Project');
+    }
+    if (!projectFolder) return;
+    approved = await driveEnsureFolder(token, projectFolder, 'Approved');
+    await db(`projects?id=eq.${s.project_id}`, { method: 'PATCH', body: { approved_folder_id: approved } });
+    if (s.project) s.project.approved_folder_id = approved;
+  }
+  const name = v.original_filename || ('Approved v' + v.version_no);
+  await driveApi(token, 'files/' + v.drive_file_id + '/copy?fields=id&supportsAllDrives=true', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, parents: [approved] }) });
+}
+
 // map decision -> submission status
 const DEC_STATUS = { approve: 'approved', reject: 'rejected', request_changes: 'changes_requested' };
 
@@ -122,7 +150,7 @@ export default async function handler(req, res) {
       const rows = await db(`submissions?id=eq.${id}&select=id,project_id,artist_id,status,current_version,approved_version,max_revisions`);
       const s = rows && rows[0];
       if (!s) return null;
-      const pr = await db(`projects?id=eq.${s.project_id}&select=id,client_id,artist_id,title,drive_folder_id`);
+      const pr = await db(`projects?id=eq.${s.project_id}&select=id,client_id,artist_id,title,drive_folder_id,approved_folder_id,messaging_enabled,artist_messaging_enabled`);
       s.project = pr && pr[0];
       return s;
     }
@@ -216,17 +244,23 @@ export default async function handler(req, res) {
       await notify(artistId, kindMap[body.decision], titleMap[body.decision],
         body.decision === 'approve' ? 'The client approved this version.' : 'The client left feedback on this version.',
         { project_id: s.project_id, submission_id: s.id, version_id: vId });
+      // on approval, mirror the approved file into the project's "Approved" Drive folder
+      if (body.decision === 'approve') { try { await copyToApproved(db, s, vId); } catch (e) {} }
       return res.status(200).json({ ok: true, status: newStatus });
     }
 
     // ---- Protected message (client|artist). Validated in UI too; server is authoritative.
     if (action === 'sendMessage') {
       if (!body.project_id || !body.body) return res.status(400).json({ error: 'project_id + body required' });
-      // authorization: caller must be a participant of the project
-      const pr = await db(`projects?id=eq.${body.project_id}&select=id,client_id,artist_id`);
+      // authorization + messaging toggles (messaging is OFF by default)
+      const pr = await db(`projects?id=eq.${body.project_id}&select=id,client_id,artist_id,messaging_enabled,artist_messaging_enabled`);
       const p = pr && pr[0];
-      const participant = isStaff(me.role) || (p && (p.client_id === me.id || p.artist_id === me.id));
-      if (!participant) return res.status(403).json({ error: 'not allowed' });
+      if (!p) return res.status(404).json({ error: 'project not found' });
+      const myR = coarseRole(me.id, p);
+      const canSend = isStaff(me.role)
+        || (myR === 'client' && p.messaging_enabled)
+        || (myR === 'artist' && p.messaging_enabled && p.artist_messaging_enabled);
+      if (!canSend) return res.status(403).json({ error: 'messaging_disabled' });
       const chk = screenMessage(body.body);
       if (!chk.ok) {
         // store the blocked attempt for moderation, but do NOT deliver
@@ -269,8 +303,14 @@ export default async function handler(req, res) {
       }));
       // messages: only delivered ones, stripped of sender identity (role only)
       const msgs = await db(`messages?project_id=eq.${s.project_id}&status=eq.delivered&select=id,sender_role,body,created_at&order=created_at.asc`);
+      // messaging config (off by default): who may send in this project
+      const myRole = coarseRole(me.id, s.project);
+      const mEnabled = !!(s.project && s.project.messaging_enabled);
+      const mArtist = !!(s.project && s.project.artist_messaging_enabled);
+      const canMessage = isStaff(me.role) || (myRole === 'client' && mEnabled) || (myRole === 'artist' && mEnabled && mArtist);
       return res.status(200).json({ ok: true,
-        submission: { id: s.id, status: s.status, current_version: s.current_version, approved_version: s.approved_version, max_revisions: s.max_revisions },
+        submission: { id: s.id, status: s.status, current_version: s.current_version, approved_version: s.approved_version, max_revisions: s.max_revisions, project_title: (s.project && s.project.title) || 'Project' },
+        messaging: { enabled: mEnabled, artist_enabled: mArtist, can_message: canMessage, is_staff: isStaff(me.role) },
         versions, feedback, items, comments, messages: msgs });
     }
 
@@ -397,6 +437,21 @@ export default async function handler(req, res) {
       if (body.id) await db(`notifications?id=eq.${body.id}&user_id=eq.${me.id}`, { method: 'PATCH', body: { read: true } });
       else await db(`notifications?user_id=eq.${me.id}&read=eq.false`, { method: 'PATCH', body: { read: true } });
       return res.status(200).json({ ok: true });
+    }
+
+    // ---- Admin: turn messaging on/off for a project (client + artist), off by default
+    if (action === 'setMessaging') {
+      if (!isStaff(me.role)) return res.status(403).json({ error: 'admins only' });
+      if (!body.project_id) return res.status(400).json({ error: 'project_id required' });
+      const patch = {};
+      if (typeof body.messaging_enabled === 'boolean') patch.messaging_enabled = body.messaging_enabled;
+      if (typeof body.artist_messaging_enabled === 'boolean') patch.artist_messaging_enabled = body.artist_messaging_enabled;
+      if (!Object.keys(patch).length) return res.status(400).json({ error: 'nothing to set' });
+      // turning client messaging off also disables artist messaging
+      if (patch.messaging_enabled === false) patch.artist_messaging_enabled = false;
+      await db(`projects?id=eq.${body.project_id}`, { method: 'PATCH', body: patch });
+      await audit(me, 'messaging.set', 'project', body.project_id, patch);
+      return res.status(200).json({ ok: true, ...patch });
     }
 
     return res.status(400).json({ error: 'unknown action' });

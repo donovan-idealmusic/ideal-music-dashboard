@@ -1374,6 +1374,37 @@ function DriveAudioPlayer({versionId,versionNo,posRef,onEnded}){
   </div>;
 }
 
+function DownloadPopup({submissionId,title,close,toast}){
+  const [opts,setOpts]=useState(null);
+  const [sel,setSel]=useState({masters:true,stems:false,contracts:false});
+  const [busy,setBusy]=useState(false);
+  useEffect(()=>{ (async()=>{ try{ const j=await rv('downloadOptions',{submission_id:submissionId}); const o=j.options||{masters:true,stems:false,contracts:false}; setOpts(o); setSel({masters:!!o.masters,stems:false,contracts:false}); }catch(e){ setOpts({masters:true,stems:false,contracts:false}); } })(); },[]);
+  const rows=[['masters','Masters','Final mixed masters','note'],['stems','Stems','Individual track stems','grid'],['contracts','Contracts','Agreements & invoices','contract']];
+  const toggle=(k)=>{ if(opts&&!opts[k])return; setSel(s=>Object.assign({},s,{[k]:!s[k]})); };
+  const chosen=rows.map(r=>r[0]).filter(k=>sel[k]);
+  const download=async()=>{
+    if(!chosen.length)return; setBusy(true);
+    try{ const j=await rv('getDownload',{submission_id:submissionId,kinds:chosen});
+      if(j.url){ const a=document.createElement('a'); a.href=j.url; a.rel='noopener'; document.body.appendChild(a); a.click(); a.remove(); toast('⬇ Preparing your download…'); close(); }
+      else toast('✗ '+(j.error||'Could not prepare download'));
+    }catch(e){ toast('✗ '+(e.message||'Error')); }
+    setBusy(false);
+  };
+  return <div className="rs-dlg-back" onClick={close}><div className="rs-dlg" onClick={e=>e.stopPropagation()}>
+    <h3>Download files</h3>
+    <div className="sub">{title} · choose what to include</div>
+    {opts===null?<div style={{padding:'2px 0'}}>{[0,1,2].map(i=><div key={i} className="rs-sk" style={{height:64,marginBottom:9,borderRadius:15}}/>)}</div>
+    :rows.map(function(r){ const k=r[0],avail=opts[k],on=sel[k]&&avail;
+      return <button key={k} className={"rs-dlg-opt"+(on?' on':'')+(avail?'':' disabled')} onClick={()=>toggle(k)}>
+        <span className="ic">{I[r[3]]({style:{width:19,height:19}})}</span>
+        <span className="tx"><b>{r[1]}</b><small>{avail?r[2]:'Not available for this project'}</small></span>
+        <span className="ck">{on?<I.check style={{width:13,height:13}}/>:null}</span>
+      </button>; })}
+    <div className="rs-dlg-acts"><button className="btn ghost" style={{flex:1,justifyContent:'center'}} onClick={close}>Cancel</button>
+      <button className="btn" style={{flex:1.4,justifyContent:'center',opacity:chosen.length&&!busy?1:.5}} disabled={!chosen.length||busy} onClick={download}><I.down style={{width:15,height:15}}/>{busy?'Preparing…':'Download'+(chosen.length>1?' ('+chosen.length+')':'')}</button></div>
+  </div></div>;
+}
+
 function ReviewStudio({role,toast}){
   const isClient=role==='client', isArtist=role==='artist', isStaff=role==='admin'||role==='superadmin';
   const canDecide=isClient||isStaff, canUpload=isArtist||isStaff;
@@ -1390,6 +1421,7 @@ function ReviewStudio({role,toast}){
   const [revSummary,setRevSummary]=useState('');
   const [uploadPct,setUploadPct]=useState(-1);
   const [vfilter,setVfilter]=useState('all');
+  const [dlPopup,setDlPopup]=useState(false);
   const posRef=useRef({});
   const fileRef=useRef(null);
   const RsSwitch=({on,disabled,onClick})=><button disabled={disabled} onClick={onClick} style={{width:42,height:25,borderRadius:13,background:on?'var(--green)':'var(--sep-strong)',position:'relative',transition:'background .2s',flex:'0 0 42px',cursor:disabled?'default':'pointer',opacity:disabled?.55:1}}><span style={{position:'absolute',top:2,left:on?19:2,width:21,height:21,borderRadius:'50%',background:'#fff',transition:'left .2s',boxShadow:'0 1px 3px rgba(0,0,0,.3)'}}/></button>;
@@ -1409,6 +1441,7 @@ function ReviewStudio({role,toast}){
   const canMessage=!!messaging.can_message;
   const isApproved=(v)=>v.decision==='approved'||(subInfo&&v.id===subInfo.approved_version);
   const railVersions=vfilter==='approved'?versions.filter(isApproved):versions;
+  const dlDemo=async()=>{ if(!ver||!ver.has_audio)return; try{ const j=await rv('getPlayback',{version_id:ver.id}); if(j.url){ const a=document.createElement('a'); a.href=j.url+'&dl=1'; a.rel='noopener'; document.body.appendChild(a); a.click(); a.remove(); toast('⬇ Downloading V'+ver.version_no); } else toast('Audio still processing'); }catch(e){ toast('✗ '+(e.message||'Error')); } };
   const verFeedback=thread?thread.feedback.filter(f=>f.version_id===selVer):[];
   const verItems=thread?thread.items.filter(x=>x.version_id===selVer):[];
   const verComments=thread?thread.comments.filter(c=>c.version_id===selVer):[];
@@ -1476,7 +1509,7 @@ function ReviewStudio({role,toast}){
   const playerPane=<div className="rs-pane" style={{display:(tab==='player')?undefined:'none'}}><div className="rs-main">
     <div style={{position:'relative'}}>
       <div className="rs-player" style={{marginBottom:0}}>
-        <div className="rs-pl-head"><div style={{minWidth:0,flex:1}}><div style={{fontSize:11,fontWeight:640,color:'var(--accent-2)',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:3,display:'flex',alignItems:'center',gap:5}}><I.note style={{width:12,height:12}}/>{sub.project_title}</div><div className="rs-pl-title">Version {ver?ver.version_no:'—'}{ver&&subInfo&&ver.id===subInfo.approved_version?' · Approved':''}</div>{ver&&ver.original_filename&&<div className="rs-pl-file">{ver.original_filename}{ver.size_bytes?' · '+rsBytes(ver.size_bytes):''}</div>}</div>{ver&&statusPill(ver.decision||(subInfo&&ver.id===subInfo.current_version?subInfo.status:'submitted'))}</div>
+        <div className="rs-pl-head"><div style={{minWidth:0,flex:1}}><div style={{fontSize:11,fontWeight:640,color:'var(--accent-2)',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:3,display:'flex',alignItems:'center',gap:5}}><I.note style={{width:12,height:12}}/>{sub.project_title}</div><div className="rs-pl-title">Version {ver?ver.version_no:'—'}{ver&&subInfo&&ver.id===subInfo.approved_version?' · Approved':''}</div>{ver&&ver.original_filename&&<div className="rs-pl-file">{ver.original_filename}{ver.size_bytes?' · '+rsBytes(ver.size_bytes):''}</div>}</div>{ver&&<div style={{display:'flex',alignItems:'center',gap:8}}>{ver.has_audio&&<button className="rs-icbtn" style={{width:36,height:36,flex:'0 0 36px'}} onClick={dlDemo} title="Download this version"><I.down style={{width:16,height:16}}/></button>}{statusPill(ver.decision||(subInfo&&ver.id===subInfo.current_version?subInfo.status:'submitted'))}</div>}</div>
       </div>
       {ver&&(ver.has_audio?<div style={{marginTop:-2}}><DriveAudioPlayer versionId={ver.id} versionNo={ver.version_no} posRef={posRef} onEnded={()=>{}}/></div>
         :<div className="rs-player"><div className="rs-state"><div className="rs-spin"/><h5>{PROC_LABEL[ver.processing_status]||'Processing audio'}</h5><div className="rs-proc-bar"><i/></div><p>This version is being prepared. It will start playing automatically once Drive finishes.</p></div></div>)}
@@ -1522,10 +1555,12 @@ function ReviewStudio({role,toast}){
     <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:16,flexWrap:'wrap'}}>
       <button className="btn ghost sm" onClick={()=>{setSub(null);setThread(null);}}><I.back style={{width:15,height:15}}/>All</button>
       <div style={{minWidth:0}}><h1 style={{fontSize:19,fontWeight:680,letterSpacing:'-.02em',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{sub.project_title}</h1><div style={{fontSize:12.5,color:'var(--text-3)',display:'flex',alignItems:'center',gap:7,marginTop:1}}>{subInfo&&<><span className="rs-dot" style={{background:STATUS_COLOR[subInfo.status]||'var(--text-3)'}}/>{STATUS_LABEL[subInfo.status]||subInfo.status}<span>·</span>{versions.length} version{versions.length===1?'':'s'}</>}</div></div>
+      <button className="btn ghost sm" style={{marginLeft:'auto'}} onClick={()=>setDlPopup(true)} title="Download project files"><I.down style={{width:15,height:15}}/>Download</button>
     </div>
     <div className="rs-tabbar"><button className={tab==='versions'?'on':''} onClick={()=>setTab('versions')}>Versions</button><button className={tab==='player'?'on':''} onClick={()=>setTab('player')}>Player</button><button className={tab==='feedback'?'on':''} onClick={()=>setTab('feedback')}>Feedback</button></div>
     {!thread?<div className="rs-studio"><div className="rs-sk" style={{height:320}}/><div className="rs-sk" style={{height:320}}/></div>
     :<div className="rs-studio">{railPane}{playerPane}{sidePane}</div>}
+    {dlPopup&&<DownloadPopup submissionId={sub.submission_id} title={sub.project_title} close={()=>setDlPopup(false)} toast={toast}/>}
   </div></div></div>;
 }
 

@@ -68,7 +68,7 @@ export default async function handler(req, res) {
     if (!process.env.GOOGLE_SA_KEY) return res.status(503).json({ error: 'Drive not configured', code: 'config' });
 
     // map internal version id -> Drive fileId (server-side only)
-    const rows = await db(`submission_versions?id=eq.${vid}&select=drive_file_id,mime_type,processing_status`);
+    const rows = await db(`submission_versions?id=eq.${vid}&select=drive_file_id,mime_type,processing_status,original_filename`);
     const v = rows && rows[0];
     if (!v) return res.status(404).json({ error: 'not found', code: 'missing' });
     if (!v.drive_file_id) return res.status(409).json({ error: 'no audio yet', code: 'processing' });
@@ -98,6 +98,10 @@ export default async function handler(req, res) {
     res.setHeader('Content-Type', v.mime_type || dr.headers.get('content-type') || 'audio/mpeg');
     res.setHeader('Accept-Ranges', 'bytes');
     res.setHeader('Cache-Control', 'private, no-store');
+    if (req.query.dl) {
+      const fn = (v.original_filename || ('demo-' + vid.slice(0, 8) + '.' + ((v.mime_type || 'audio/mpeg').split('/')[1] || 'mp3'))).replace(/[\r\n"]/g, '');
+      res.setHeader('Content-Disposition', 'attachment; filename="' + fn + '"');
+    }
     const cl = dr.headers.get('content-length'); if (cl) res.setHeader('Content-Length', cl);
     const cr = dr.headers.get('content-range'); if (cr) res.setHeader('Content-Range', cr);
 

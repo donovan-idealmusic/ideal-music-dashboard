@@ -32,6 +32,15 @@ function signAudio(vid, ttlSec = 1800) {
   return { url: `/api/audio?vid=${vid}&exp=${exp}&sig=${sig}`, exp };
 }
 
+// signed ZIP download of a project's Masters/Stems/Contracts folders (no Drive ids exposed)
+function signDownload(sid, kinds, ttlSec = 900) {
+  const crypto = require('crypto');
+  const exp = Math.floor(Date.now() / 1000) + ttlSec;
+  const k = kinds.join(',');
+  const sig = crypto.createHmac('sha256', SECRET()).update(sid + '.' + k + '.' + exp).digest('hex');
+  return { url: `/api/drive?sid=${sid}&kinds=${encodeURIComponent(k)}&exp=${exp}&sig=${sig}`, exp };
+}
+
 // ── Google Drive helpers (service account; Drive is the source of truth for audio) ──
 async function driveToken(scope) {
   const crypto = require('crypto');
@@ -328,6 +337,36 @@ export default async function handler(req, res) {
       const sg = signAudio(ver.id);
       return res.status(200).json({ ok: true, ready: true, status: 'ready', url: sg.url, exp: sg.exp,
         mime: ver.mime_type || 'audio/mpeg', duration_sec: ver.duration_sec || null, size_bytes: ver.size_bytes || null });
+    }
+
+    // ---- Which project folders are available to download (Masters/Stems/Contracts)
+    if (action === 'downloadOptions') {
+      const s = await loadSub(body.submission_id);
+      if (!s || !canSee(s)) return res.status(403).json({ error: 'not allowed' });
+      const opts = { masters: !!(s.project && s.project.drive_folder_id), stems: false, contracts: false };
+      try {
+        if (s.project && s.project.drive_folder_id && process.env.GOOGLE_SA_KEY) {
+          const token = await driveToken('https://www.googleapis.com/auth/drive.readonly');
+          const pr = await driveApi(token, 'files/' + s.project.drive_folder_id + '?fields=parents&supportsAllDrives=true');
+          const projectFolder = (pr.j && pr.j.parents && pr.j.parents[0]) || s.project.drive_folder_id;
+          for (const nm of ['Stems', 'Contracts']) {
+            const q = `name = '${nm}' and '${projectFolder}' in parents and trashed = false and mimeType = 'application/vnd.google-apps.folder'`;
+            const f = await driveApi(token, 'files?q=' + encodeURIComponent(q) + '&fields=files(id)&supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives');
+            if (f.j.files && f.j.files[0]) opts[nm.toLowerCase()] = true;
+          }
+        }
+      } catch (e) {}
+      return res.status(200).json({ ok: true, options: opts });
+    }
+
+    // ---- Signed ZIP download URL for the chosen folders
+    if (action === 'getDownload') {
+      const s = await loadSub(body.submission_id);
+      if (!s || !canSee(s)) return res.status(403).json({ error: 'not allowed' });
+      const kinds = (body.kinds || []).filter((k) => ['masters', 'stems', 'contracts'].indexOf(k) >= 0);
+      if (!kinds.length) return res.status(400).json({ error: 'pick at least one folder' });
+      const sg = signDownload(s.id, kinds);
+      return res.status(200).json({ ok: true, url: sg.url, exp: sg.exp });
     }
 
     // ---- Submissions the caller can review (anonymized summary)

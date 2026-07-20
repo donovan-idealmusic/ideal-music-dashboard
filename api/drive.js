@@ -82,8 +82,71 @@ function makeZip(files) {
   return Buffer.concat([...parts, cd, end]);
 }
 
+// ── signed submission-scoped multi-folder download (Masters/Stems/Contracts) ──
+const SROLE = () => process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const SECRET = () => process.env.AUDIO_SIGNING_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const KIND_FOLDER = { masters: 'Masters', stems: 'Stems', contracts: 'Contracts' };
+function verifyDl(sid, kinds, exp, sig) {
+  const crypto = require('crypto');
+  if (!sid || !kinds || !exp || !sig) return false;
+  if (Number(exp) * 1000 < Date.now()) return false;
+  const good = crypto.createHmac('sha256', SECRET()).update(sid + '.' + kinds + '.' + exp).digest('hex');
+  const a = Buffer.from(good), b = Buffer.from(String(sig));
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+async function sdb(path) {
+  const r = await fetch(SUPA_URL + '/rest/v1/' + path, { headers: { apikey: SROLE(), Authorization: 'Bearer ' + SROLE() } });
+  const t = await r.text(); if (!r.ok) throw new Error('db ' + r.status + ': ' + t); return t ? JSON.parse(t) : null;
+}
+async function getParent(token, id) {
+  const r = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?fields=parents&supportsAllDrives=true`, { headers: { Authorization: 'Bearer ' + token } });
+  const j = await r.json(); return j.parents && j.parents[0];
+}
+async function findSubfolder(token, parent, name) {
+  const q = encodeURIComponent(`name = '${name}' and '${parent}' in parents and trashed = false and mimeType = 'application/vnd.google-apps.folder'`);
+  const r = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)&supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives`, { headers: { Authorization: 'Bearer ' + token } });
+  const j = await r.json(); return j.files && j.files[0];
+}
+async function collect(token, folderId, prefix, out) {
+  const items = await listFolder(token, folderId);
+  for (const it of items) {
+    if (it.mimeType === 'application/vnd.google-apps.folder') await collect(token, it.id, prefix + it.name + '/', out);
+    else out.push({ path: prefix + it.name, id: it.id });
+  }
+}
+
 export default async function handler(req, res) {
   try {
+    if (!process.env.GOOGLE_SA_KEY) return res.status(503).json({ error: 'Drive not configured yet' });
+
+    // signed download: /api/drive?sid=<submissionId>&kinds=masters,stems,contracts&exp&sig
+    if (req.query.sid) {
+      const { sid, kinds, exp, sig } = req.query;
+      if (!verifyDl(sid, kinds, exp, sig)) return res.status(403).json({ error: 'invalid or expired link' });
+      const rows = await sdb(`submissions?id=eq.${sid}&select=project_id`);
+      const s = rows && rows[0];
+      if (!s) return res.status(404).json({ error: 'not found' });
+      const pr = await sdb(`projects?id=eq.${s.project_id}&select=title,drive_folder_id`);
+      const p = pr && pr[0];
+      if (!p || !p.drive_folder_id) return res.status(404).json({ error: 'no files' });
+      const token = await getAccessToken(JSON.parse(process.env.GOOGLE_SA_KEY));
+      const projectFolder = (await getParent(token, p.drive_folder_id)) || p.drive_folder_id;
+      const want = String(kinds).toLowerCase().split(',').map((k) => k.trim()).filter((k) => KIND_FOLDER[k]);
+      const picked = [];
+      for (const k of want) {
+        const sub = k === 'masters' ? { id: p.drive_folder_id } : await findSubfolder(token, projectFolder, KIND_FOLDER[k]);
+        if (sub && sub.id) await collect(token, sub.id, KIND_FOLDER[k] + '/', picked);
+      }
+      if (!picked.length) return res.status(404).json({ error: 'No files in the selected folders' });
+      const withData = [];
+      for (const f of picked) withData.push({ path: f.path, data: await download(token, f.id) });
+      const zip = makeZip(withData);
+      const slug = (p.title || 'Project').replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '') || 'Project';
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="IdealMusic_${slug}_${want.join('-')}.zip"`);
+      return res.status(200).send(zip);
+    }
+
     const auth = req.headers.authorization || '';
     const uu = await fetch(SUPA_URL + '/auth/v1/user', { headers: { Authorization: auth, apikey: process.env.SUPABASE_ANON_KEY || '' } });
     if (uu.status !== 200) return res.status(401).json({ error: 'Sign in required' });

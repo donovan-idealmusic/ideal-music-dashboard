@@ -1263,6 +1263,260 @@ function RemindersCard({toast}){
   </div>;
 }
 
+/* ===== Review Studio — live, Drive-backed audio review ===== */
+async function rvToken(){ try{ const {data}=await supa.auth.getSession(); return (data&&data.session&&data.session.access_token)||null; }catch(_){ return null; } }
+async function rv(action,body){
+  const tok=await rvToken();
+  const r=await fetch('/api/review',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},tok?{Authorization:'Bearer '+tok}:{}),body:JSON.stringify(Object.assign({action},body||{}))});
+  let j; try{j=await r.json();}catch(_){j={};}
+  if(!r.ok) throw Object.assign(new Error(j.error||('HTTP '+r.status)),{status:r.status,data:j});
+  return j;
+}
+// client-side mirror of the protected-message filter (server remains authoritative)
+function screenMsg(input){
+  const s=String(input||'').toLowerCase().normalize('NFKD').replace(/[̀-ͯ​-‏‪-‮⁠﻿]/g,'');
+  const deob=s.replace(/[\[\(\{<]\s*(at|arroba)\s*[\]\)\}>]/g,'@').replace(/\s+(at|arroba)\s+/g,'@').replace(/[\[\(\{<]\s*(dot|punto)\s*[\]\)\}>]/g,'.').replace(/\s+(dot|punto)\s+/g,'.').replace(/\s*@\s*/g,'@').replace(/\s*\.\s*/g,'.');
+  if(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i.test(deob)) return false;
+  if(/\b(?:https?:\/\/|www\.)\S+/i.test(deob)) return false;
+  if(/\b[a-z0-9-]+\.(?:com|net|org|io|me|co|app|link|gg|tv|xyz|info|biz|es|mx|to)\b/i.test(deob)) return false;
+  if(/(^|[^a-z0-9._%+-])@[a-z0-9._]{2,}/i.test(deob)) return false;
+  const plats=['instagram','insta','tiktok','whatsapp','telegram','snapchat','discord','linkedin','twitter','onlyfans','gmail','hotmail','outlook'];
+  for(var i=0;i<plats.length;i++){ if(new RegExp('(^|[^a-z])'+plats[i]+'($|[^a-z])','i').test(s)) return false; }
+  const intents=['contact me','dm me','message me','follow me','find me on','my number','my email','text me','call me','off platform','add me'];
+  for(var k=0;k<intents.length;k++){ if(s.indexOf(intents[k])>=0) return false; }
+  if(/(?:\+?\d[\s.\-()]*){7,}/.test(input)) return false;
+  if(/\b\d{7,}\b/.test(input)) return false;
+  return true;
+}
+const rsTime=(s)=>{ if(s==null||isNaN(s))return '0:00'; s=Math.max(0,Math.floor(s)); const m=Math.floor(s/60),ss=s%60; return m+':'+String(ss).padStart(2,'0'); };
+const rsBytes=(b)=>{ if(!b)return ''; const u=['B','KB','MB','GB']; let i=0,n=b; while(n>=1024&&i<u.length-1){n/=1024;i++;} return n.toFixed(n<10&&i>0?1:0)+' '+u[i]; };
+const rsDate=(iso)=>{ if(!iso)return ''; try{ const d=new Date(iso); return d.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' · '+d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}); }catch(_){return '';} };
+const PROC_LABEL={uploading:'Uploading to Google Drive',syncing:'Syncing file',processing:'Processing audio',retrying:'Reconnecting',ready:'Ready'};
+const STATUS_COLOR={approved:'var(--green)',rejected:'var(--red)',changes_requested:'var(--orange)',submitted:'var(--accent)',in_review:'var(--accent)',pending:'var(--text-3)',draft:'var(--text-3)'};
+const STATUS_LABEL={approved:'Approved',rejected:'Rejected',changes_requested:'Changes requested',submitted:'Pending review',in_review:'In review',pending:'Pending',draft:'Draft'};
+
+function DriveAudioPlayer({versionId,versionNo,posRef,onEnded}){
+  const audioRef=useRef(null);
+  const [phase,setPhase]=useState('loading');   // loading|processing|ready|error
+  const [code,setCode]=useState('');
+  const [dur,setDur]=useState(0);
+  const [cur,setCur]=useState(0);
+  const [buf,setBuf]=useState(0);
+  const [playing,setPlaying]=useState(false);
+  const [waiting,setWaiting]=useState(false);
+  const [vol,setVol]=useState(()=>{ try{const v=parseFloat(localStorage.getItem('rs_vol')); return isNaN(v)?1:v;}catch(_){return 1;} });
+  const pollRef=useRef(null), retryRef=useRef(null), retriesRef=useRef(0), aliveRef=useRef(true), dragRef=useRef(false);
+  const bars=useMemo(()=>{ const id=String(versionId||'x'); const arr=[]; for(let i=0;i<52;i++){ const seed=(id.charCodeAt(i%id.length)||7)*(i+3); const v=Math.abs(Math.sin(seed)*0.5+Math.sin(seed*1.7)*0.5); arr.push(0.18+v*0.82); } return arr; },[versionId]);
+  const clearTimers=()=>{ if(pollRef.current)clearTimeout(pollRef.current); if(retryRef.current)clearTimeout(retryRef.current); pollRef.current=null; retryRef.current=null; };
+
+  const load=async()=>{
+    clearTimers();
+    try{
+      const j=await rv('getPlayback',{version_id:versionId});
+      if(!aliveRef.current)return;
+      if(!j.ready){ setPhase('processing'); setCode(j.status||'processing'); if(j.duration_sec)setDur(j.duration_sec); pollRef.current=setTimeout(load,4000); return; }
+      if(j.duration_sec)setDur(j.duration_sec);
+      setPhase('ready'); setCode(''); retriesRef.current=0;
+      const a=audioRef.current; if(a){ a.src=j.url; a.load(); a.volume=vol; const want=(posRef&&posRef.current&&posRef.current[versionId])||0; if(want){ try{a.currentTime=want; setCur(want);}catch(_){} } }
+    }catch(e){
+      if(!aliveRef.current)return;
+      if(e.status===401){ setPhase('error'); setCode('signin'); return; }
+      retriesRef.current++;
+      if(retriesRef.current<=4){ setPhase('processing'); setCode('retrying'); retryRef.current=setTimeout(load,Math.min(6000,1500*retriesRef.current)); }
+      else { setPhase('error'); setCode('load'); }
+    }
+  };
+  useEffect(()=>{ aliveRef.current=true; setPlaying(false); setCur(0); setBuf(0); setPhase('loading'); load();
+    return ()=>{ aliveRef.current=false; clearTimers(); const a=audioRef.current; if(a){ try{a.pause(); a.removeAttribute('src'); a.load();}catch(_){} } };
+  },[versionId]);
+
+  const onLoaded=()=>{ const a=audioRef.current; if(a&&a.duration&&isFinite(a.duration))setDur(a.duration); };
+  const onTime=()=>{ const a=audioRef.current; if(!a)return; if(!dragRef.current)setCur(a.currentTime); if(posRef&&posRef.current)posRef.current[versionId]=a.currentTime; };
+  const onProg=()=>{ const a=audioRef.current; if(!a||!a.buffered||!a.buffered.length||!a.duration)return; try{ setBuf(a.buffered.end(a.buffered.length-1)/a.duration); }catch(_){} };
+  const onErr=()=>{ if(retriesRef.current<3){ retriesRef.current++; load(); } else { setPhase('error'); setCode('audio'); } };
+
+  const toggle=()=>{ const a=audioRef.current; if(!a)return; if(a.paused){ a.play().then(()=>setPlaying(true)).catch(()=>{}); } else { a.pause(); setPlaying(false); } };
+  const seekTo=(frac)=>{ const a=audioRef.current; const D=dur||(a&&a.duration)||0; if(!a||!D)return; const t=Math.max(0,Math.min(1,frac))*D; a.currentTime=t; setCur(t); };
+  const skip=(d)=>{ const a=audioRef.current; if(!a)return; const D=dur||a.duration||0; a.currentTime=Math.max(0,Math.min(D,a.currentTime+d)); setCur(a.currentTime); };
+  const changeVol=(v)=>{ setVol(v); const a=audioRef.current; if(a)a.volume=v; try{localStorage.setItem('rs_vol',String(v));}catch(_){} };
+  const evFrac=(e,el)=>{ const r=el.getBoundingClientRect(); const cx=(e.touches&&e.touches[0]?e.touches[0].clientX:e.clientX); return (cx-r.left)/r.width; };
+  const seekHandlers={
+    onPointerDown:(e)=>{ dragRef.current=true; try{e.currentTarget.setPointerCapture(e.pointerId);}catch(_){} seekTo(evFrac(e,e.currentTarget)); },
+    onPointerMove:(e)=>{ if(dragRef.current)seekTo(evFrac(e,e.currentTarget)); },
+    onPointerUp:()=>{ dragRef.current=false; },
+    onPointerCancel:()=>{ dragRef.current=false; },
+  };
+
+  const frac=dur?Math.min(1,cur/dur):0;
+  const volIcon=vol===0?'M4 9v6h4l5 5V4L8 9H4z':(vol<0.5?'M4 9v6h4l5 5V4L8 9H4zM16 9a3 3 0 010 6':'M4 9v6h4l5 5V4L8 9H4zM16 9a3 3 0 010 6M18.5 7a6 6 0 010 10');
+
+  if(phase!=='ready'){
+    const isProc=phase==='processing'||phase==='loading';
+    const emsg={missing:'File moved or deleted',permission:'Drive permissions disconnected',signin:'Sign in to listen',audio:"Couldn't load audio",load:"Couldn't reach the audio"};
+    return <div className="rs-player"><audio ref={audioRef} preload="metadata" onLoadedMetadata={onLoaded} onTimeUpdate={onTime} onProgress={onProg} onWaiting={()=>setWaiting(true)} onPlaying={()=>{setWaiting(false);setPlaying(true);}} onPause={()=>setPlaying(false)} onEnded={()=>{setPlaying(false);onEnded&&onEnded();}} onError={onErr} style={{display:'none'}}/>
+      <div className="rs-state">
+        {isProc?<><div className="rs-spin"/><h5>{phase==='loading'?'Preparing playback':(PROC_LABEL[code]||'Processing audio')}</h5><div className="rs-proc-bar"><i/></div><p>Google Drive is getting this version ready. This updates automatically — no need to refresh.</p></>
+        :<><div style={{width:38,height:38,borderRadius:'50%',background:'rgba(255,59,48,.14)',display:'flex',alignItems:'center',justifyContent:'center'}}><I.x style={{width:20,height:20,color:'var(--red)'}}/></div><h5>{emsg[code]||'Unavailable'}</h5><p>{code==='permission'?'The connection to Google Drive needs to be re-authorized.':code==='missing'?'This file is no longer in the project folder.':'A temporary problem occurred while loading the audio.'}</p><button className="btn ghost sm" onClick={()=>{retriesRef.current=0;setPhase('loading');load();}}>Retry connection</button></>}
+      </div>
+    </div>;
+  }
+  return <div className="rs-player">
+    <audio ref={audioRef} preload="metadata" onLoadedMetadata={onLoaded} onTimeUpdate={onTime} onProgress={onProg} onWaiting={()=>setWaiting(true)} onPlaying={()=>{setWaiting(false);setPlaying(true);}} onPause={()=>setPlaying(false)} onEnded={()=>{setPlaying(false);onEnded&&onEnded();}} onError={onErr} style={{display:'none'}}/>
+    <div className="rs-wave" {...seekHandlers}>{bars.map((h,i)=><div key={i} className={"b"+(i/bars.length<=frac?" on":"")} style={{height:(h*100)+'%'}}/>)}</div>
+    <div className="rs-seek" {...seekHandlers}><div className="buf" style={{width:(buf*100)+'%'}}/><div className="fill" style={{width:(frac*100)+'%'}}/><div className="knob" style={{left:(frac*100)+'%'}}/></div>
+    <div className="rs-times"><span>{rsTime(cur)}</span><span>{waiting?'buffering…':rsTime(dur)}</span></div>
+    <div className="rs-controls">
+      <button className="rs-play" onClick={toggle} aria-label={playing?'Pause':'Play'}>{playing?<I.pause style={{width:22,height:22}}/>:<I.play style={{width:22,height:22,marginLeft:2}}/>}</button>
+      <button className="rs-icbtn" onClick={()=>skip(-10)} aria-label="Back 10s"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M11 8L7 12l4 4M17 8l-4 4 4 4" strokeLinecap="round" strokeLinejoin="round"/></svg><small>10</small></button>
+      <button className="rs-icbtn" onClick={()=>skip(10)} aria-label="Forward 10s"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M13 8l4 4-4 4M7 8l4 4-4 4" strokeLinecap="round" strokeLinejoin="round"/></svg><small>10</small></button>
+      <div className="rs-vol"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" style={{color:'var(--text-3)'}}><path d={volIcon} strokeLinecap="round" strokeLinejoin="round"/></svg><input type="range" min="0" max="1" step="0.02" value={vol} onChange={(e)=>changeVol(parseFloat(e.target.value))} aria-label="Volume"/></div>
+    </div>
+  </div>;
+}
+
+function ReviewStudio({role,toast}){
+  const isClient=role==='client', isArtist=role==='artist', isStaff=role==='admin'||role==='superadmin';
+  const canDecide=isClient||isStaff, canUpload=isArtist||isStaff;
+  const [items,setItems]=useState(null);
+  const [err,setErr]=useState('');
+  const [sub,setSub]=useState(null);
+  const [thread,setThread]=useState(null);
+  const [selVer,setSelVer]=useState(null);
+  const [busy,setBusy]=useState(false);
+  const [tab,setTab]=useState('player');
+  const [general,setGeneral]=useState('');
+  const [msg,setMsg]=useState('');
+  const [flash,setFlash]=useState('');
+  const [revSummary,setRevSummary]=useState('');
+  const [uploadPct,setUploadPct]=useState(-1);
+  const posRef=useRef({});
+  const fileRef=useRef(null);
+
+  const loadList=async()=>{ setErr(''); try{ const j=await rv('listMine'); setItems(j.items||[]); }catch(e){ setErr(e.status===401?'signin':(e.message||'error')); setItems([]); } };
+  const loadThread=async(sid)=>{ try{ const j=await rv('listThread',{submission_id:sid}); setThread(j); const cur=j.submission&&j.submission.current_version; setSelVer(cur||(j.versions.length?j.versions[j.versions.length-1].id:null)); }catch(e){ toast('✗ '+(e.message||'Error')); } };
+  useEffect(()=>{ loadList(); },[]);
+  useEffect(()=>{ if(sub){ setThread(null); loadThread(sub.submission_id); } },[sub]);
+
+  const versions=thread?thread.versions:[];
+  const selIdx=versions.findIndex(v=>v.id===selVer);
+  const ver=selIdx>=0?versions[selIdx]:null;
+  const prevVer=selIdx>0?versions[selIdx-1]:null;
+  const subInfo=thread?thread.submission:null;
+  const verFeedback=thread?thread.feedback.filter(f=>f.version_id===selVer):[];
+  const verItems=thread?thread.items.filter(x=>x.version_id===selVer):[];
+  const verComments=thread?thread.comments.filter(c=>c.version_id===selVer):[];
+
+  const compareTo=(other)=>{ if(!other)return; posRef.current[other]=posRef.current[selVer]||0; setSelVer(other); toast('A/B · switched to V'+versions.find(v=>v.id===other).version_no); };
+
+  const doDecide=async(decision)=>{
+    if((decision==='reject'||decision==='request_changes')&&general.trim()&&!screenMsg(general)){ toast('⚠︎ Blocked: remove contact info / links'); return; }
+    setBusy(true);
+    try{ const body={submission_id:sub.submission_id,decision}; if(general.trim())body.general_text=general.trim();
+      const j=await rv('decide',body);
+      if(j.blocked){ toast('⚠︎ '+(j.message||'Message blocked')); }
+      else { setFlash(decision==='approve'?'rgba(52,199,89,.5)':decision==='reject'?'rgba(255,59,48,.45)':'rgba(255,159,10,.45)'); setTimeout(()=>setFlash(''),900); setGeneral(''); toast('✓ '+(decision==='approve'?'Version approved':decision==='request_changes'?'Changes requested':'Version rejected')); await loadThread(sub.submission_id); }
+    }catch(e){ toast('✗ '+(e.message||'Error')); }
+    setBusy(false);
+  };
+  const doSend=async()=>{ const b=msg.trim(); if(!b)return; if(!screenMsg(b)){ toast('⚠︎ Blocked: no contact info, links or handles'); return; } setBusy(true);
+    try{ const j=await rv('sendMessage',{project_id:sub.project_id,submission_id:sub.submission_id,body:b}); if(j.blocked)toast('⚠︎ '+(j.message||'Message blocked')); else { setMsg(''); await loadThread(sub.submission_id); } }catch(e){ toast('✗ '+(e.message||'Error')); } setBusy(false);
+  };
+  const readDuration=(file)=>new Promise((res)=>{ try{ const a=document.createElement('audio'); a.preload='metadata'; a.onloadedmetadata=()=>{ const d=a.duration; try{URL.revokeObjectURL(a.src);}catch(_){}; res(isFinite(d)?Math.round(d):null); }; a.onerror=()=>res(null); a.src=URL.createObjectURL(file); }catch(_){ res(null); } });
+  const putResumable=(url,file,onProg)=>new Promise((res,rej)=>{ const xhr=new XMLHttpRequest(); xhr.open('PUT',url); xhr.upload.onprogress=(e)=>{ if(e.lengthComputable&&onProg)onProg(Math.round(e.loaded/e.total*100)); }; xhr.onload=()=>{ if(xhr.status>=200&&xhr.status<300){ try{res(JSON.parse(xhr.responseText));}catch(_){res({});} } else rej(new Error('Upload '+xhr.status)); }; xhr.onerror=()=>rej(new Error('network')); xhr.setRequestHeader('Content-Type',file.type||'application/octet-stream'); xhr.send(file); });
+  const doUpload=async(file)=>{
+    if(!file)return;
+    if(!/audio\//.test(file.type||'')&&!/\.(mp3|wav|m4a|aac|flac|ogg|aiff?)$/i.test(file.name)){ toast('⚠︎ Please choose an audio file'); return; }
+    if(revSummary.trim()&&!screenMsg(revSummary)){ toast('⚠︎ Summary blocked: no contact info'); return; }
+    setUploadPct(0);
+    try{
+      const duration=await readDuration(file);
+      const start=await rv('startUpload',{submission_id:sub.submission_id,filename:file.name,mime:file.type||'audio/mpeg'});
+      const df=await putResumable(start.uploadUrl,file,(p)=>setUploadPct(p));
+      await rv('uploadVersion',{submission_id:sub.submission_id,drive_file_id:df.id,mime_type:df.mimeType||file.type||'audio/mpeg',size_bytes:Number(df.size||file.size)||null,original_filename:file.name,duration_sec:duration,revision_summary:revSummary.trim()||null});
+      setUploadPct(-1); setRevSummary(''); toast('✓ New version uploaded'); await loadThread(sub.submission_id);
+    }catch(e){ setUploadPct(-1); toast('✗ '+(e.message||'Upload failed')); }
+  };
+
+  // ── sign-in required (demo mode without a real session) ──
+  if(err==='signin') return <div className="view content"><div className="rs" style={{textAlign:'center',padding:'60px 20px'}}><div style={{maxWidth:360,margin:'0 auto'}}><div style={{width:56,height:56,borderRadius:16,margin:'0 auto 16px',background:'linear-gradient(135deg,#5e5ce6,#0a84ff)',display:'flex',alignItems:'center',justifyContent:'center'}}><I.chat style={{width:26,height:26,color:'#fff'}}/></div><h2 style={{fontSize:20,fontWeight:640}}>Sign in to review</h2><p style={{color:'var(--text-2)',fontSize:14,marginTop:8,lineHeight:1.5}}>The live feedback studio needs your Ideal Music account. Sign out of the demo and sign in with your email to load your projects.</p></div></div></div>;
+
+  // ── list view ──
+  if(!sub){
+    return <div className="view content"><div className="rs"><div className="rs-wrap">
+      <div style={{marginBottom:18}}><h1 style={{fontSize:22,fontWeight:680,letterSpacing:'-.02em'}}>Feedback</h1><p style={{color:'var(--text-2)',fontSize:14,marginTop:3}}>{isClient?'Listen to demos and leave feedback for each version.':isArtist?'Upload revisions and track client decisions.':'Every review across your projects.'}</p></div>
+      {items===null?<div className="rs-list">{[0,1,2].map(i=><div key={i} className="rs-sk" style={{height:104}}/>)}</div>
+      :items.length===0?<div className="rs-card" style={{textAlign:'center',padding:'44px 20px'}}><div style={{width:52,height:52,borderRadius:15,margin:'0 auto 14px',background:'var(--sep)',display:'flex',alignItems:'center',justifyContent:'center'}}><I.folder style={{width:24,height:24,color:'var(--text-3)'}}/></div><h5 style={{fontSize:15,fontWeight:600}}>Nothing to review yet</h5><p style={{color:'var(--text-3)',fontSize:13,marginTop:6,maxWidth:340,margin:'6px auto 0',lineHeight:1.5}}>{canUpload?'When you upload a demo to a project, it will appear here for client review.':'When an artist uploads a demo to one of your projects, it will show up here.'}</p></div>
+      :<div className="rs-list">{items.map(it=><button key={it.submission_id} className="rs-subcard" onClick={()=>setSub(it)}>
+          <div className="rs-sc-top"><div className="rs-sc-ic"><I.note style={{width:20,height:20}}/></div><div style={{minWidth:0,flex:1}}><h4>{it.project_title}</h4><div className="rs-sc-meta"><span className="rs-dot" style={{background:STATUS_COLOR[it.status]||'var(--text-3)'}}/>{STATUS_LABEL[it.status]||it.status}</div></div></div>
+          <div style={{display:'flex',alignItems:'center',gap:8}}><span className="rs-vcount"><I.note style={{width:13,height:13}}/>{it.versions_count} version{it.versions_count===1?'':'s'}</span>{it.approved_version_no?<span className="rs-badge approved">V{it.approved_version_no} approved</span>:<span className="rs-badge current">V{it.current_version_no||it.versions_count} current</span>}<I.arrow style={{width:16,height:16,color:'var(--text-3)',marginLeft:'auto'}}/></div>
+        </button>)}</div>}
+    </div></div></div>;
+  }
+
+  // ── thread view (version rail + player + feedback) ──
+  const statusPill=(s)=><span className="rs-badge" style={{background:(STATUS_COLOR[s]||'var(--text-3)')+'22',color:STATUS_COLOR[s]||'var(--text-3)'}}>{STATUS_LABEL[s]||s}</span>;
+  const railPane=<div className="rs-pane rail" style={{display:tab==='versions'?'block':undefined}}><div className="rs-rail"><div className="rs-rail-h">Versions</div>
+    {versions.map(v=>{ const isCur=subInfo&&v.id===subInfo.current_version; const isAppr=subInfo&&v.id===subInfo.approved_version; const pc={ready:'var(--green)',processing:'var(--orange)',uploading:'var(--orange)',syncing:'var(--orange)',missing:'var(--red)',permission:'var(--red)',error:'var(--red)'}[v.processing_status]||'var(--text-3)';
+      return <button key={v.id} className={"rs-vitem"+(v.id===selVer?" sel":"")} onClick={()=>{setSelVer(v.id);setTab('player');}}>
+        <div className="rs-vtop"><span className="rs-vno">V{v.version_no}</span>{isCur&&<span className="rs-badge current">Current</span>}{isAppr&&<span className="rs-badge approved">Approved</span>}<span style={{marginLeft:'auto'}}>{statusPill(v.decision||(isCur?subInfo.status:'submitted'))}</span></div>
+        {v.original_filename&&<div className="rs-vname">{v.original_filename}</div>}
+        <div className="rs-vsub"><span className="rs-dot" style={{background:pc}}/>{v.processing_status==='ready'?(v.duration_sec?rsTime(v.duration_sec):'Audio'):(PROC_LABEL[v.processing_status]||v.processing_status)}<span>·</span>{rsDate(v.created_at)}{v.by&&<><span>·</span><span style={{textTransform:'capitalize'}}>{v.by}</span></>}</div>
+        {v.last_feedback_at&&<div className="rs-vsub" style={{color:'var(--accent-2)'}}>Feedback {rsDate(v.last_feedback_at)}</div>}
+      </button>; })}
+  </div></div>;
+
+  const playerPane=<div className="rs-pane" style={{display:(tab==='player')?undefined:'none'}}><div className="rs-main">
+    <div style={{position:'relative'}}>
+      <div className="rs-player" style={{marginBottom:0}}>
+        <div className="rs-pl-head"><div style={{minWidth:0,flex:1}}><div className="rs-pl-title">Version {ver?ver.version_no:'—'}{ver&&subInfo&&ver.id===subInfo.approved_version?' · Approved':''}</div>{ver&&ver.original_filename&&<div className="rs-pl-file">{ver.original_filename}{ver.size_bytes?' · '+rsBytes(ver.size_bytes):''}</div>}</div>{ver&&statusPill(ver.decision||(subInfo&&ver.id===subInfo.current_version?subInfo.status:'submitted'))}</div>
+      </div>
+      {ver&&(ver.has_audio?<div style={{marginTop:-2}}><DriveAudioPlayer versionId={ver.id} versionNo={ver.version_no} posRef={posRef} onEnded={()=>{}}/></div>
+        :<div className="rs-player"><div className="rs-state"><div className="rs-spin"/><h5>{PROC_LABEL[ver.processing_status]||'Processing audio'}</h5><div className="rs-proc-bar"><i/></div><p>This version is being prepared. It will start playing automatically once Drive finishes.</p></div></div>)}
+      {flash&&<div className="rs-flash go" style={{background:flash}}/>}
+    </div>
+    {ver&&<div className="rs-player" style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap',padding:'14px 18px'}}>
+      <div style={{fontSize:12.5,color:'var(--text-3)'}}>{ver.revision_summary?ver.revision_summary:'No revision note'}</div>
+      {prevVer&&<button className="btn ghost sm" style={{marginLeft:'auto'}} onClick={()=>compareTo(prevVer.id)}><I.back style={{width:14,height:14}}/>A/B vs V{prevVer.version_no}</button>}
+    </div>}
+  </div></div>;
+
+  const sidePane=<div className="rs-pane" style={{display:(tab==='feedback')?undefined:'none'}}><div className="rs-side">
+    {canDecide&&ver&&<div className="rs-card"><h5>Your decision<span className="rs-vtag">V{ver.version_no}</span></h5>
+      <textarea className="rs-ta" placeholder="Add feedback for this version… (what to change, what works)" value={general} onChange={(e)=>setGeneral(e.target.value)}/>
+      {general.trim()&&!screenMsg(general)&&<div className="rs-warn"><I.x style={{width:13,height:13,flex:'0 0 13px',marginTop:1}}/>Remove contact info, links or social handles to send.</div>}
+      <div className="rs-decide"><button className="btn green" disabled={busy} onClick={()=>doDecide('approve')}><I.check style={{width:15,height:15}}/>Approve</button><button className="btn" style={{background:'var(--orange)',boxShadow:'0 4px 14px rgba(255,159,10,.3)'}} disabled={busy} onClick={()=>doDecide('request_changes')}>Request changes</button><button className="btn red" disabled={busy} onClick={()=>doDecide('reject')}><I.x style={{width:15,height:15}}/>Reject</button></div>
+    </div>}
+    {canUpload&&<div className="rs-card"><h5>Upload a new version</h5>
+      <input type="text" className="rs-msg" style={{width:'100%',border:'1px solid var(--sep-strong)',borderRadius:11,padding:'10px 13px',fontSize:13,background:'var(--bg-solid)',color:'var(--text)',marginBottom:10}} placeholder="Revision note (optional) — what changed" value={revSummary} onChange={(e)=>setRevSummary(e.target.value)}/>
+      <input ref={fileRef} type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.flac,.aiff" style={{display:'none'}} onChange={(e)=>{ const f=e.target.files&&e.target.files[0]; if(f)doUpload(f); e.target.value=''; }}/>
+      {uploadPct<0?<div className="rs-upload-zone" onClick={()=>fileRef.current&&fileRef.current.click()}><I.up style={{width:22,height:22,color:'var(--accent)'}}/><div style={{fontSize:13,fontWeight:560,marginTop:6}}>Choose an audio file</div><div style={{fontSize:11.5,color:'var(--text-3)',marginTop:2}}>Saved privately to the project's Drive folder</div></div>
+      :<div><div style={{fontSize:12.5,color:'var(--text-2)',marginBottom:6}}>{uploadPct<100?'Uploading to Google Drive… '+uploadPct+'%':'Finalizing…'}</div><div className="rs-proc-bar" style={{width:'100%',maxWidth:'none'}}><i style={{animation:'none',left:0,width:uploadPct+'%',background:'var(--accent)'}}/></div></div>}
+    </div>}
+    <div className="rs-card"><h5>Feedback{ver?<span className="rs-vtag">V{ver.version_no}</span>:null}</h5>
+      {verFeedback.length===0&&verItems.length===0&&verComments.length===0?<p style={{fontSize:12.5,color:'var(--text-3)'}}>No feedback on this version yet.</p>:null}
+      {verFeedback.map(f=><div key={f.id} className="rs-fb"><div className="rs-fb-role">Client feedback</div><p>{f.general_text}</p><div className="rs-fb-time">{rsDate(f.created_at)}</div></div>)}
+      {verItems.length>0&&<div style={{marginBottom:8}}>{verItems.map(it=><div key={it.id} style={{display:'flex',gap:8,alignItems:'flex-start',padding:'5px 0',fontSize:12.5}}><span className="rs-dot" style={{marginTop:5,background:it.level==='required'?'var(--red)':it.level==='optional'?'var(--text-3)':'var(--orange)'}}/><div><b style={{textTransform:'capitalize'}}>{it.category||'Note'}: </b>{it.body}</div></div>)}</div>}
+      {verComments.map(c=><div key={c.id} className="rs-cmt"><span className="ts">{rsTime(c.ts_sec)}</span><p>{c.body}</p></div>)}
+    </div>
+    <div className="rs-card"><h5>Messages</h5>
+      {thread&&thread.messages.length===0?<p style={{fontSize:12.5,color:'var(--text-3)'}}>No messages yet.</p>:null}
+      {thread&&thread.messages.map(m=><div key={m.id} style={{padding:'7px 0',borderBottom:'1px solid var(--sep)'}}><div style={{fontSize:11,fontWeight:640,color:'var(--text-2)',textTransform:'capitalize'}}>{m.sender_role}</div><p style={{fontSize:12.5,lineHeight:1.5,marginTop:2}}>{m.body}</p></div>)}
+      <div className="rs-msg"><input placeholder="Message (no contact info)" value={msg} onChange={(e)=>setMsg(e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter')doSend();}}/><button className="btn sm" disabled={busy||!msg.trim()} onClick={doSend}>Send</button></div>
+      {msg.trim()&&!screenMsg(msg)&&<div className="rs-warn"><I.x style={{width:13,height:13,flex:'0 0 13px',marginTop:1}}/>Blocked: personal contact details can't be shared.</div>}
+    </div>
+  </div></div>;
+
+  return <div className="view content"><div className="rs"><div className="rs-wrap">
+    <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:16,flexWrap:'wrap'}}>
+      <button className="btn ghost sm" onClick={()=>{setSub(null);setThread(null);}}><I.back style={{width:15,height:15}}/>All</button>
+      <div style={{minWidth:0}}><h1 style={{fontSize:19,fontWeight:680,letterSpacing:'-.02em',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{sub.project_title}</h1><div style={{fontSize:12.5,color:'var(--text-3)',display:'flex',alignItems:'center',gap:7,marginTop:1}}>{subInfo&&<><span className="rs-dot" style={{background:STATUS_COLOR[subInfo.status]||'var(--text-3)'}}/>{STATUS_LABEL[subInfo.status]||subInfo.status}<span>·</span>{versions.length} version{versions.length===1?'':'s'}</>}</div></div>
+    </div>
+    <div className="rs-tabbar"><button className={tab==='versions'?'on':''} onClick={()=>setTab('versions')}>Versions</button><button className={tab==='player'?'on':''} onClick={()=>setTab('player')}>Player</button><button className={tab==='feedback'?'on':''} onClick={()=>setTab('feedback')}>Feedback</button></div>
+    {!thread?<div className="rs-studio"><div className="rs-sk" style={{height:320}}/><div className="rs-sk" style={{height:320}}/></div>
+    :<div className="rs-studio">{railPane}{playerPane}{sidePane}</div>}
+  </div></div></div>;
+}
+
 function Shell({role,setRole,isSuper,lang,setLang,theme,setTheme}){
   const{t}=useT();
   const[page,setPage]=useState('dashboard');const[activeProject,setActiveProject]=useState(null);
@@ -1271,11 +1525,11 @@ function Shell({role,setRole,isSuper,lang,setLang,theme,setTheme}){
   useEffect(()=>{const h=(e)=>{if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();setCmdk(v=>!v);}if(e.key==='Escape'){setCmdk(false);setNotif(false);setNewP(false);}};window.addEventListener('keydown',h);return()=>window.removeEventListener('keydown',h);},[]);
   const go=(p,proj)=>{setMnav(false);if(p==='new'){setNewP(true);return;}if(p==='project'){setActiveProject(proj);setPage('project');return;}setPage(p);setActiveProject(null);setNotif(false);};
   const nav=role==='admin'
-    ?[['dashboard','grid',t('nav_dashboard')],['projects','folder',t('nav_projects')],['requests','inbox',t('nav_requests')],['contracts','contract',t('nav_contracts')],['invoices','receipt',t('nav_invoices')],['payments','dollar',t('nav_payments')],['accounting','activity',t('accounting')],['calendar','cal',t('nav_calendar')],['drive','drive',t('nav_drive')],['users','users',t('nav_users')],['import','down',t('importTitle')],['settings','settings',t('nav_settings')]]
+    ?[['dashboard','grid',t('nav_dashboard')],['projects','folder',t('nav_projects')],['review','chat','Feedback'],['requests','inbox',t('nav_requests')],['contracts','contract',t('nav_contracts')],['invoices','receipt',t('nav_invoices')],['payments','dollar',t('nav_payments')],['accounting','activity',t('accounting')],['calendar','cal',t('nav_calendar')],['drive','drive',t('nav_drive')],['users','users',t('nav_users')],['import','down',t('importTitle')],['settings','settings',t('nav_settings')]]
     :role==='client'
-    ?[['dashboard','grid',t('nav_home')],['projects','folder',t('nav_myprojects')],['requests','inbox',t('nav_requests')],['contracts','contract',t('nav_contracts')],['invoices','receipt',t('nav_invoices')],['drive','drive',t('nav_myfiles')],['settings','settings',t('nav_settings')]]
-    :[['dashboard','grid',t('nav_home')],['projects','folder',t('nav_assigned')],['earnings','dollar',t('nav_earnings')],['drive','drive',t('nav_files')],['settings','settings',t('nav_settings')]];
-  const titles={dashboard:role==='admin'?t('nav_dashboard'):t('nav_home'),projects:role==='client'?t('nav_myprojects'):role==='artist'?t('nav_assigned'):t('nav_projects'),requests:t('requestsTitle'),contracts:t('contractsTitle'),invoices:t('invoicesTitle'),payments:t('paymentsTitle'),accounting:t('accounting'),import:t('importTitle'),earnings:t('nav_earnings'),calendar:t('calTitle'),drive:t('driveTitle'),users:t('usersTitle'),settings:t('settingsTitle'),project:activeProject?activeProject.title:''};
+    ?[['dashboard','grid',t('nav_home')],['projects','folder',t('nav_myprojects')],['review','chat','Feedback'],['requests','inbox',t('nav_requests')],['contracts','contract',t('nav_contracts')],['invoices','receipt',t('nav_invoices')],['drive','drive',t('nav_myfiles')],['settings','settings',t('nav_settings')]]
+    :[['dashboard','grid',t('nav_home')],['projects','folder',t('nav_assigned')],['review','chat','Feedback'],['earnings','dollar',t('nav_earnings')],['drive','drive',t('nav_files')],['settings','settings',t('nav_settings')]];
+  const titles={dashboard:role==='admin'?t('nav_dashboard'):t('nav_home'),projects:role==='client'?t('nav_myprojects'):role==='artist'?t('nav_assigned'):t('nav_projects'),review:'Feedback',requests:t('requestsTitle'),contracts:t('contractsTitle'),invoices:t('invoicesTitle'),payments:t('paymentsTitle'),accounting:t('accounting'),import:t('importTitle'),earnings:t('nav_earnings'),calendar:t('calTitle'),drive:t('driveTitle'),users:t('usersTitle'),settings:t('settingsTitle'),project:activeProject?activeProject.title:''};
   const prof=PROFILES[role];const subt={admin:t('workspace'),client:t('portal'),artist:t('studio')}[role];
   return <div className="shell">
     <aside className={"sidebar"+(mnav?" open":"")}>
@@ -1299,6 +1553,7 @@ function Shell({role,setRole,isSuper,lang,setLang,theme,setTheme}){
       </header>
       {page==='dashboard'&&<Dashboard role={role} go={go} name={prof.name}/>}
       {page==='projects'&&<Projects role={role} go={go}/>}
+      {page==='review'&&<ReviewStudio role={role} toast={toast}/>}
       {page==='project'&&activeProject&&<ProjectDetail p={activeProject} role={role} go={go} toast={toast}/>}
       {page==='requests'&&<Requests role={role} toast={toast}/>}
       {page==='contracts'&&<Contracts role={role} toast={toast}/>}

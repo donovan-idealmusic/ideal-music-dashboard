@@ -427,6 +427,111 @@ input,textarea,select{font-family:inherit;}
   .topbar .search{display:none;}
   .content{padding-left:16px!important;padding-right:16px!important;}
 }
+ /* ===== Review Studio (Drive-backed audio) ===== */
+ .rs{container-type:inline-size;width:100%;}
+ .rs-wrap{max-width:1680px;margin:0 auto;}
+ .rs-list{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));}
+ .rs-subcard{text-align:left;background:var(--card-solid);border:1px solid var(--sep);border-radius:var(--radius);padding:18px 18px 16px;box-shadow:var(--shadow);transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s,border-color .3s;position:relative;overflow:hidden;}
+ .rs-subcard:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);border-color:var(--sep-strong);}
+ .rs-subcard .rs-sc-top{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+ .rs-subcard .rs-sc-ic{width:40px;height:40px;border-radius:12px;flex:0 0 40px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(94,92,230,.16),rgba(10,132,255,.16));color:var(--accent-2);}
+ .rs-subcard h4{font-size:15.5px;font-weight:600;letter-spacing:-.01em;line-height:1.25;}
+ .rs-subcard .rs-sc-meta{display:flex;align-items:center;gap:8px;color:var(--text-3);font-size:12.5px;margin-top:2px;}
+ .rs-vcount{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:560;color:var(--text-2);background:var(--sep);border-radius:8px;padding:3px 9px;}
+ .rs-studio{display:grid;gap:16px;grid-template-columns:1fr;align-items:start;}
+ .rs-tabbar{display:flex;gap:6px;background:var(--sep);border-radius:12px;padding:4px;}
+ .rs-tabbar button{flex:1;padding:9px 10px;border-radius:9px;font-size:13px;font-weight:560;color:var(--text-2);transition:all .2s;}
+ .rs-tabbar button.on{background:var(--card-solid);color:var(--text);box-shadow:var(--shadow);}
+ .rs-pane{min-width:0;}
+ @container (min-width:760px){
+   .rs-studio{grid-template-columns:minmax(230px,300px) 1fr;}
+   .rs-tabbar{display:none;}
+   .rs-pane.rail{grid-row:1/3;}
+   .rs-pane{display:block!important;}
+ }
+ @container (min-width:1160px){
+   .rs-studio{grid-template-columns:minmax(240px,320px) minmax(0,1.5fr) minmax(320px,1fr);}
+ }
+ .rs-rail{background:var(--card-solid);border:1px solid var(--sep);border-radius:var(--radius);box-shadow:var(--shadow);padding:10px;display:flex;flex-direction:column;gap:6px;position:sticky;top:0;max-height:calc(100vh - 130px);overflow-y:auto;}
+ .rs-rail-h{font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;padding:6px 8px 2px;}
+ .rs-vitem{text-align:left;border:1px solid transparent;border-radius:14px;padding:11px 12px;transition:background .18s,border-color .2s;position:relative;display:flex;flex-direction:column;gap:5px;}
+ .rs-vitem:hover{background:var(--sep);}
+ .rs-vitem.sel{background:linear-gradient(135deg,rgba(10,132,255,.1),rgba(94,92,230,.08));border-color:rgba(10,132,255,.35);}
+ .rs-vitem .rs-vtop{display:flex;align-items:center;gap:8px;}
+ .rs-vno{font-size:13.5px;font-weight:640;letter-spacing:-.01em;}
+ .rs-vname{font-size:12px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+ .rs-vsub{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:11.5px;color:var(--text-3);}
+ .rs-dot{width:7px;height:7px;border-radius:50%;flex:0 0 7px;}
+ .rs-badge{font-size:10px;font-weight:640;padding:2px 7px;border-radius:7px;letter-spacing:.01em;}
+ .rs-badge.current{background:rgba(10,132,255,.14);color:var(--accent);}
+ .rs-badge.approved{background:rgba(52,199,89,.16);color:var(--green);}
+ .rs-main{display:flex;flex-direction:column;gap:16px;min-width:0;}
+ .rs-player{background:var(--card-solid);border:1px solid var(--sep);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 22px;position:relative;overflow:hidden;}
+ .rs-player .rs-pl-head{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+ .rs-pl-title{font-size:16px;font-weight:640;letter-spacing:-.01em;}
+ .rs-pl-file{font-size:12.5px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+ .rs-wave{display:flex;align-items:center;gap:2px;height:64px;margin:6px 0 4px;cursor:pointer;touch-action:none;user-select:none;}
+ .rs-wave .b{flex:1;min-width:2px;background:var(--sep-strong);border-radius:2px;transition:background .12s,transform .12s;}
+ .rs-wave .b.on{background:linear-gradient(180deg,var(--accent),var(--accent-2));}
+ .rs-seek{height:6px;border-radius:3px;background:var(--sep);position:relative;cursor:pointer;touch-action:none;margin:10px 0 6px;}
+ .rs-seek .fill{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--accent-2));}
+ .rs-seek .buf{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--sep-strong);}
+ .rs-seek .knob{position:absolute;top:50%;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.3);transform:translate(-50%,-50%);}
+ .rs-times{display:flex;justify-content:space-between;font-size:12px;color:var(--text-3);font-variant-numeric:tabular-nums;}
+ .rs-controls{display:flex;align-items:center;gap:10px;margin-top:14px;}
+ .rs-play{width:56px;height:56px;flex:0 0 56px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(10,132,255,.4);transition:transform .12s,box-shadow .2s;}
+ .rs-play:hover{box-shadow:0 8px 26px rgba(10,132,255,.5);}
+ .rs-play:active{transform:scale(.94);}
+ .rs-icbtn{width:42px;height:42px;flex:0 0 42px;border-radius:50%;background:var(--sep);color:var(--text-2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;transition:background .18s,color .18s,transform .12s;position:relative;}
+ .rs-icbtn:hover{background:var(--sep-strong);color:var(--text);}
+ .rs-icbtn:active{transform:scale(.92);}
+ .rs-icbtn small{position:absolute;bottom:5px;font-size:8px;font-weight:700;}
+ .rs-vol{margin-left:auto;display:flex;align-items:center;gap:8px;}
+ .rs-vol input[type=range]{-webkit-appearance:none;appearance:none;width:90px;height:4px;border-radius:2px;background:var(--sep-strong);outline:none;}
+ .rs-vol input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer;}
+ .rs-vol input[type=range]::-moz-range-thumb{width:14px;height:14px;border:none;border-radius:50%;background:var(--accent);cursor:pointer;}
+ .rs-state{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;min-height:150px;text-align:center;padding:20px;}
+ .rs-state .rs-spin{width:34px;height:34px;border-radius:50%;border:3px solid var(--sep-strong);border-top-color:var(--accent);animation:rsspin .8s linear infinite;}
+ @keyframes rsspin{to{transform:rotate(360deg);}}
+ .rs-state h5{font-size:14.5px;font-weight:600;}
+ .rs-state p{font-size:12.5px;color:var(--text-3);max-width:320px;line-height:1.5;}
+ .rs-proc-bar{width:200px;max-width:60cqw;height:5px;border-radius:3px;background:var(--sep);overflow:hidden;position:relative;}
+ .rs-proc-bar i{position:absolute;left:-40%;top:0;bottom:0;width:40%;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:rsindet 1.3s ease-in-out infinite;}
+ @keyframes rsindet{to{left:100%;}}
+ .rs-side{display:flex;flex-direction:column;gap:14px;min-width:0;}
+ .rs-card{background:var(--card-solid);border:1px solid var(--sep);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;}
+ .rs-card h5{font-size:13.5px;font-weight:640;letter-spacing:-.01em;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+ .rs-card h5 .rs-vtag{font-size:11px;font-weight:600;color:var(--accent);background:rgba(10,132,255,.12);padding:2px 8px;border-radius:7px;margin-left:auto;}
+ .rs-fb{border-left:2px solid var(--sep-strong);padding:2px 0 2px 12px;margin-bottom:12px;}
+ .rs-fb .rs-fb-role{font-size:11px;font-weight:640;color:var(--text-2);text-transform:capitalize;}
+ .rs-fb p{font-size:13px;line-height:1.55;color:var(--text);margin-top:3px;max-width:62ch;}
+ .rs-fb .rs-fb-time{font-size:11px;color:var(--text-3);margin-top:4px;}
+ .rs-cmt{display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--sep);}
+ .rs-cmt .ts{font-size:11px;font-weight:640;color:var(--accent);background:rgba(10,132,255,.1);border-radius:6px;padding:2px 7px;flex:0 0 auto;cursor:pointer;font-variant-numeric:tabular-nums;}
+ .rs-cmt p{font-size:12.5px;line-height:1.5;color:var(--text);}
+ .rs-decide{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+ .rs-ta{width:100%;border:1px solid var(--sep-strong);border-radius:12px;padding:11px 13px;font-size:13px;line-height:1.5;background:var(--bg-solid);color:var(--text);resize:vertical;min-height:74px;transition:border-color .2s;}
+ .rs-ta:focus{outline:none;border-color:var(--accent);}
+ .rs-warn{font-size:11.5px;color:var(--orange);margin-top:6px;display:flex;gap:6px;align-items:flex-start;line-height:1.4;}
+ .rs-msg{display:flex;gap:8px;align-items:center;margin-top:8px;}
+ .rs-msg input{flex:1;border:1px solid var(--sep-strong);border-radius:11px;padding:10px 13px;font-size:13px;background:var(--bg-solid);color:var(--text);}
+ .rs-msg input:focus{outline:none;border-color:var(--accent);}
+ .rs-act{display:flex;gap:10px;align-items:flex-start;padding:9px 0;}
+ .rs-act .rs-act-dot{width:9px;height:9px;border-radius:50%;margin-top:5px;flex:0 0 9px;}
+ .rs-act .rs-act-t{font-size:12.5px;line-height:1.45;}
+ .rs-act .rs-act-time{font-size:11px;color:var(--text-3);margin-top:2px;}
+ .rs-sk{background:linear-gradient(90deg,var(--sep) 25%,var(--sep-strong) 37%,var(--sep) 63%);background-size:400% 100%;animation:rssk 1.4s ease infinite;border-radius:10px;}
+ @keyframes rssk{0%{background-position:100% 0;}100%{background-position:-100% 0;}}
+ .rs-flash{position:absolute;inset:0;pointer-events:none;opacity:0;border-radius:var(--radius);}
+ .rs-flash.go{animation:rsflash .9s ease;}
+ @keyframes rsflash{0%{opacity:0;}20%{opacity:.5;}100%{opacity:0;}}
+ .rs-upload-zone{border:1.5px dashed var(--sep-strong);border-radius:14px;padding:18px;text-align:center;transition:border-color .2s,background .2s;cursor:pointer;}
+ .rs-upload-zone:hover{border-color:var(--accent);background:rgba(10,132,255,.04);}
+ @media (max-width:520px){
+   .rs-player{padding:16px 15px;}
+   .rs-play{width:52px;height:52px;flex-basis:52px;}
+   .rs-vol input[type=range]{width:70px;}
+ }
 </style>
 </head>
 <body>
@@ -8633,6 +8738,1293 @@ function RemindersCard({
     }
   }, t('saveChanges')));
 }
+async function rvToken() {
+  try {
+    const {
+      data
+    } = await supa.auth.getSession();
+    return data && data.session && data.session.access_token || null;
+  } catch (_) {
+    return null;
+  }
+}
+async function rv(action, body) {
+  const tok = await rvToken();
+  const r = await fetch('/api/review', {
+    method: 'POST',
+    headers: Object.assign({
+      'Content-Type': 'application/json'
+    }, tok ? {
+      Authorization: 'Bearer ' + tok
+    } : {}),
+    body: JSON.stringify(Object.assign({
+      action
+    }, body || {}))
+  });
+  let j;
+  try {
+    j = await r.json();
+  } catch (_) {
+    j = {};
+  }
+  if (!r.ok) throw Object.assign(new Error(j.error || 'HTTP ' + r.status), {
+    status: r.status,
+    data: j
+  });
+  return j;
+}
+function screenMsg(input) {
+  const s = String(input || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ​-‏‪-‮⁠﻿]/g, '');
+  const deob = s.replace(/[\[\(\{<]\s*(at|arroba)\s*[\]\)\}>]/g, '@').replace(/\s+(at|arroba)\s+/g, '@').replace(/[\[\(\{<]\s*(dot|punto)\s*[\]\)\}>]/g, '.').replace(/\s+(dot|punto)\s+/g, '.').replace(/\s*@\s*/g, '@').replace(/\s*\.\s*/g, '.');
+  if (/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i.test(deob)) return false;
+  if (/\b(?:https?:\/\/|www\.)\S+/i.test(deob)) return false;
+  if (/\b[a-z0-9-]+\.(?:com|net|org|io|me|co|app|link|gg|tv|xyz|info|biz|es|mx|to)\b/i.test(deob)) return false;
+  if (/(^|[^a-z0-9._%+-])@[a-z0-9._]{2,}/i.test(deob)) return false;
+  const plats = ['instagram', 'insta', 'tiktok', 'whatsapp', 'telegram', 'snapchat', 'discord', 'linkedin', 'twitter', 'onlyfans', 'gmail', 'hotmail', 'outlook'];
+  for (var i = 0; i < plats.length; i++) {
+    if (new RegExp('(^|[^a-z])' + plats[i] + '($|[^a-z])', 'i').test(s)) return false;
+  }
+  const intents = ['contact me', 'dm me', 'message me', 'follow me', 'find me on', 'my number', 'my email', 'text me', 'call me', 'off platform', 'add me'];
+  for (var k = 0; k < intents.length; k++) {
+    if (s.indexOf(intents[k]) >= 0) return false;
+  }
+  if (/(?:\+?\d[\s.\-()]*){7,}/.test(input)) return false;
+  if (/\b\d{7,}\b/.test(input)) return false;
+  return true;
+}
+const rsTime = s => {
+  if (s == null || isNaN(s)) return '0:00';
+  s = Math.max(0, Math.floor(s));
+  const m = Math.floor(s / 60),
+    ss = s % 60;
+  return m + ':' + String(ss).padStart(2, '0');
+};
+const rsBytes = b => {
+  if (!b) return '';
+  const u = ['B', 'KB', 'MB', 'GB'];
+  let i = 0,
+    n = b;
+  while (n >= 1024 && i < u.length - 1) {
+    n /= 1024;
+    i++;
+  }
+  return n.toFixed(n < 10 && i > 0 ? 1 : 0) + ' ' + u[i];
+};
+const rsDate = iso => {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric'
+    }) + ' · ' + d.toLocaleTimeString(undefined, {
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  } catch (_) {
+    return '';
+  }
+};
+const PROC_LABEL = {
+  uploading: 'Uploading to Google Drive',
+  syncing: 'Syncing file',
+  processing: 'Processing audio',
+  retrying: 'Reconnecting',
+  ready: 'Ready'
+};
+const STATUS_COLOR = {
+  approved: 'var(--green)',
+  rejected: 'var(--red)',
+  changes_requested: 'var(--orange)',
+  submitted: 'var(--accent)',
+  in_review: 'var(--accent)',
+  pending: 'var(--text-3)',
+  draft: 'var(--text-3)'
+};
+const STATUS_LABEL = {
+  approved: 'Approved',
+  rejected: 'Rejected',
+  changes_requested: 'Changes requested',
+  submitted: 'Pending review',
+  in_review: 'In review',
+  pending: 'Pending',
+  draft: 'Draft'
+};
+function DriveAudioPlayer({
+  versionId,
+  versionNo,
+  posRef,
+  onEnded
+}) {
+  const audioRef = useRef(null);
+  const [phase, setPhase] = useState('loading');
+  const [code, setCode] = useState('');
+  const [dur, setDur] = useState(0);
+  const [cur, setCur] = useState(0);
+  const [buf, setBuf] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [waiting, setWaiting] = useState(false);
+  const [vol, setVol] = useState(() => {
+    try {
+      const v = parseFloat(localStorage.getItem('rs_vol'));
+      return isNaN(v) ? 1 : v;
+    } catch (_) {
+      return 1;
+    }
+  });
+  const pollRef = useRef(null),
+    retryRef = useRef(null),
+    retriesRef = useRef(0),
+    aliveRef = useRef(true),
+    dragRef = useRef(false);
+  const bars = useMemo(() => {
+    const id = String(versionId || 'x');
+    const arr = [];
+    for (let i = 0; i < 52; i++) {
+      const seed = (id.charCodeAt(i % id.length) || 7) * (i + 3);
+      const v = Math.abs(Math.sin(seed) * 0.5 + Math.sin(seed * 1.7) * 0.5);
+      arr.push(0.18 + v * 0.82);
+    }
+    return arr;
+  }, [versionId]);
+  const clearTimers = () => {
+    if (pollRef.current) clearTimeout(pollRef.current);
+    if (retryRef.current) clearTimeout(retryRef.current);
+    pollRef.current = null;
+    retryRef.current = null;
+  };
+  const load = async () => {
+    clearTimers();
+    try {
+      const j = await rv('getPlayback', {
+        version_id: versionId
+      });
+      if (!aliveRef.current) return;
+      if (!j.ready) {
+        setPhase('processing');
+        setCode(j.status || 'processing');
+        if (j.duration_sec) setDur(j.duration_sec);
+        pollRef.current = setTimeout(load, 4000);
+        return;
+      }
+      if (j.duration_sec) setDur(j.duration_sec);
+      setPhase('ready');
+      setCode('');
+      retriesRef.current = 0;
+      const a = audioRef.current;
+      if (a) {
+        a.src = j.url;
+        a.load();
+        a.volume = vol;
+        const want = posRef && posRef.current && posRef.current[versionId] || 0;
+        if (want) {
+          try {
+            a.currentTime = want;
+            setCur(want);
+          } catch (_) {}
+        }
+      }
+    } catch (e) {
+      if (!aliveRef.current) return;
+      if (e.status === 401) {
+        setPhase('error');
+        setCode('signin');
+        return;
+      }
+      retriesRef.current++;
+      if (retriesRef.current <= 4) {
+        setPhase('processing');
+        setCode('retrying');
+        retryRef.current = setTimeout(load, Math.min(6000, 1500 * retriesRef.current));
+      } else {
+        setPhase('error');
+        setCode('load');
+      }
+    }
+  };
+  useEffect(() => {
+    aliveRef.current = true;
+    setPlaying(false);
+    setCur(0);
+    setBuf(0);
+    setPhase('loading');
+    load();
+    return () => {
+      aliveRef.current = false;
+      clearTimers();
+      const a = audioRef.current;
+      if (a) {
+        try {
+          a.pause();
+          a.removeAttribute('src');
+          a.load();
+        } catch (_) {}
+      }
+    };
+  }, [versionId]);
+  const onLoaded = () => {
+    const a = audioRef.current;
+    if (a && a.duration && isFinite(a.duration)) setDur(a.duration);
+  };
+  const onTime = () => {
+    const a = audioRef.current;
+    if (!a) return;
+    if (!dragRef.current) setCur(a.currentTime);
+    if (posRef && posRef.current) posRef.current[versionId] = a.currentTime;
+  };
+  const onProg = () => {
+    const a = audioRef.current;
+    if (!a || !a.buffered || !a.buffered.length || !a.duration) return;
+    try {
+      setBuf(a.buffered.end(a.buffered.length - 1) / a.duration);
+    } catch (_) {}
+  };
+  const onErr = () => {
+    if (retriesRef.current < 3) {
+      retriesRef.current++;
+      load();
+    } else {
+      setPhase('error');
+      setCode('audio');
+    }
+  };
+  const toggle = () => {
+    const a = audioRef.current;
+    if (!a) return;
+    if (a.paused) {
+      a.play().then(() => setPlaying(true)).catch(() => {});
+    } else {
+      a.pause();
+      setPlaying(false);
+    }
+  };
+  const seekTo = frac => {
+    const a = audioRef.current;
+    const D = dur || a && a.duration || 0;
+    if (!a || !D) return;
+    const t = Math.max(0, Math.min(1, frac)) * D;
+    a.currentTime = t;
+    setCur(t);
+  };
+  const skip = d => {
+    const a = audioRef.current;
+    if (!a) return;
+    const D = dur || a.duration || 0;
+    a.currentTime = Math.max(0, Math.min(D, a.currentTime + d));
+    setCur(a.currentTime);
+  };
+  const changeVol = v => {
+    setVol(v);
+    const a = audioRef.current;
+    if (a) a.volume = v;
+    try {
+      localStorage.setItem('rs_vol', String(v));
+    } catch (_) {}
+  };
+  const evFrac = (e, el) => {
+    const r = el.getBoundingClientRect();
+    const cx = e.touches && e.touches[0] ? e.touches[0].clientX : e.clientX;
+    return (cx - r.left) / r.width;
+  };
+  const seekHandlers = {
+    onPointerDown: e => {
+      dragRef.current = true;
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch (_) {}
+      seekTo(evFrac(e, e.currentTarget));
+    },
+    onPointerMove: e => {
+      if (dragRef.current) seekTo(evFrac(e, e.currentTarget));
+    },
+    onPointerUp: () => {
+      dragRef.current = false;
+    },
+    onPointerCancel: () => {
+      dragRef.current = false;
+    }
+  };
+  const frac = dur ? Math.min(1, cur / dur) : 0;
+  const volIcon = vol === 0 ? 'M4 9v6h4l5 5V4L8 9H4z' : vol < 0.5 ? 'M4 9v6h4l5 5V4L8 9H4zM16 9a3 3 0 010 6' : 'M4 9v6h4l5 5V4L8 9H4zM16 9a3 3 0 010 6M18.5 7a6 6 0 010 10';
+  if (phase !== 'ready') {
+    const isProc = phase === 'processing' || phase === 'loading';
+    const emsg = {
+      missing: 'File moved or deleted',
+      permission: 'Drive permissions disconnected',
+      signin: 'Sign in to listen',
+      audio: "Couldn't load audio",
+      load: "Couldn't reach the audio"
+    };
+    return React.createElement("div", {
+      className: "rs-player"
+    }, React.createElement("audio", {
+      ref: audioRef,
+      preload: "metadata",
+      onLoadedMetadata: onLoaded,
+      onTimeUpdate: onTime,
+      onProgress: onProg,
+      onWaiting: () => setWaiting(true),
+      onPlaying: () => {
+        setWaiting(false);
+        setPlaying(true);
+      },
+      onPause: () => setPlaying(false),
+      onEnded: () => {
+        setPlaying(false);
+        onEnded && onEnded();
+      },
+      onError: onErr,
+      style: {
+        display: 'none'
+      }
+    }), React.createElement("div", {
+      className: "rs-state"
+    }, isProc ? React.createElement(React.Fragment, null, React.createElement("div", {
+      className: "rs-spin"
+    }), React.createElement("h5", null, phase === 'loading' ? 'Preparing playback' : PROC_LABEL[code] || 'Processing audio'), React.createElement("div", {
+      className: "rs-proc-bar"
+    }, React.createElement("i", null)), React.createElement("p", null, "Google Drive is getting this version ready. This updates automatically — no need to refresh.")) : React.createElement(React.Fragment, null, React.createElement("div", {
+      style: {
+        width: 38,
+        height: 38,
+        borderRadius: '50%',
+        background: 'rgba(255,59,48,.14)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }
+    }, React.createElement(I.x, {
+      style: {
+        width: 20,
+        height: 20,
+        color: 'var(--red)'
+      }
+    })), React.createElement("h5", null, emsg[code] || 'Unavailable'), React.createElement("p", null, code === 'permission' ? 'The connection to Google Drive needs to be re-authorized.' : code === 'missing' ? 'This file is no longer in the project folder.' : 'A temporary problem occurred while loading the audio.'), React.createElement("button", {
+      className: "btn ghost sm",
+      onClick: () => {
+        retriesRef.current = 0;
+        setPhase('loading');
+        load();
+      }
+    }, "Retry connection"))));
+  }
+  return React.createElement("div", {
+    className: "rs-player"
+  }, React.createElement("audio", {
+    ref: audioRef,
+    preload: "metadata",
+    onLoadedMetadata: onLoaded,
+    onTimeUpdate: onTime,
+    onProgress: onProg,
+    onWaiting: () => setWaiting(true),
+    onPlaying: () => {
+      setWaiting(false);
+      setPlaying(true);
+    },
+    onPause: () => setPlaying(false),
+    onEnded: () => {
+      setPlaying(false);
+      onEnded && onEnded();
+    },
+    onError: onErr,
+    style: {
+      display: 'none'
+    }
+  }), React.createElement("div", {
+    className: "rs-wave",
+    ...seekHandlers
+  }, bars.map((h, i) => React.createElement("div", {
+    key: i,
+    className: "b" + (i / bars.length <= frac ? " on" : ""),
+    style: {
+      height: h * 100 + '%'
+    }
+  }))), React.createElement("div", {
+    className: "rs-seek",
+    ...seekHandlers
+  }, React.createElement("div", {
+    className: "buf",
+    style: {
+      width: buf * 100 + '%'
+    }
+  }), React.createElement("div", {
+    className: "fill",
+    style: {
+      width: frac * 100 + '%'
+    }
+  }), React.createElement("div", {
+    className: "knob",
+    style: {
+      left: frac * 100 + '%'
+    }
+  })), React.createElement("div", {
+    className: "rs-times"
+  }, React.createElement("span", null, rsTime(cur)), React.createElement("span", null, waiting ? 'buffering…' : rsTime(dur))), React.createElement("div", {
+    className: "rs-controls"
+  }, React.createElement("button", {
+    className: "rs-play",
+    onClick: toggle,
+    "aria-label": playing ? 'Pause' : 'Play'
+  }, playing ? React.createElement(I.pause, {
+    style: {
+      width: 22,
+      height: 22
+    }
+  }) : React.createElement(I.play, {
+    style: {
+      width: 22,
+      height: 22,
+      marginLeft: 2
+    }
+  })), React.createElement("button", {
+    className: "rs-icbtn",
+    onClick: () => skip(-10),
+    "aria-label": "Back 10s"
+  }, React.createElement("svg", {
+    viewBox: "0 0 24 24",
+    width: "18",
+    height: "18",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "1.8"
+  }, React.createElement("path", {
+    d: "M11 8L7 12l4 4M17 8l-4 4 4 4",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  })), React.createElement("small", null, "10")), React.createElement("button", {
+    className: "rs-icbtn",
+    onClick: () => skip(10),
+    "aria-label": "Forward 10s"
+  }, React.createElement("svg", {
+    viewBox: "0 0 24 24",
+    width: "18",
+    height: "18",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "1.8"
+  }, React.createElement("path", {
+    d: "M13 8l4 4-4 4M7 8l4 4-4 4",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  })), React.createElement("small", null, "10")), React.createElement("div", {
+    className: "rs-vol"
+  }, React.createElement("svg", {
+    viewBox: "0 0 24 24",
+    width: "18",
+    height: "18",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "1.7",
+    style: {
+      color: 'var(--text-3)'
+    }
+  }, React.createElement("path", {
+    d: volIcon,
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  })), React.createElement("input", {
+    type: "range",
+    min: "0",
+    max: "1",
+    step: "0.02",
+    value: vol,
+    onChange: e => changeVol(parseFloat(e.target.value)),
+    "aria-label": "Volume"
+  }))));
+}
+function ReviewStudio({
+  role,
+  toast
+}) {
+  const isClient = role === 'client',
+    isArtist = role === 'artist',
+    isStaff = role === 'admin' || role === 'superadmin';
+  const canDecide = isClient || isStaff,
+    canUpload = isArtist || isStaff;
+  const [items, setItems] = useState(null);
+  const [err, setErr] = useState('');
+  const [sub, setSub] = useState(null);
+  const [thread, setThread] = useState(null);
+  const [selVer, setSelVer] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [tab, setTab] = useState('player');
+  const [general, setGeneral] = useState('');
+  const [msg, setMsg] = useState('');
+  const [flash, setFlash] = useState('');
+  const [revSummary, setRevSummary] = useState('');
+  const [uploadPct, setUploadPct] = useState(-1);
+  const posRef = useRef({});
+  const fileRef = useRef(null);
+  const loadList = async () => {
+    setErr('');
+    try {
+      const j = await rv('listMine');
+      setItems(j.items || []);
+    } catch (e) {
+      setErr(e.status === 401 ? 'signin' : e.message || 'error');
+      setItems([]);
+    }
+  };
+  const loadThread = async sid => {
+    try {
+      const j = await rv('listThread', {
+        submission_id: sid
+      });
+      setThread(j);
+      const cur = j.submission && j.submission.current_version;
+      setSelVer(cur || (j.versions.length ? j.versions[j.versions.length - 1].id : null));
+    } catch (e) {
+      toast('✗ ' + (e.message || 'Error'));
+    }
+  };
+  useEffect(() => {
+    loadList();
+  }, []);
+  useEffect(() => {
+    if (sub) {
+      setThread(null);
+      loadThread(sub.submission_id);
+    }
+  }, [sub]);
+  const versions = thread ? thread.versions : [];
+  const selIdx = versions.findIndex(v => v.id === selVer);
+  const ver = selIdx >= 0 ? versions[selIdx] : null;
+  const prevVer = selIdx > 0 ? versions[selIdx - 1] : null;
+  const subInfo = thread ? thread.submission : null;
+  const verFeedback = thread ? thread.feedback.filter(f => f.version_id === selVer) : [];
+  const verItems = thread ? thread.items.filter(x => x.version_id === selVer) : [];
+  const verComments = thread ? thread.comments.filter(c => c.version_id === selVer) : [];
+  const compareTo = other => {
+    if (!other) return;
+    posRef.current[other] = posRef.current[selVer] || 0;
+    setSelVer(other);
+    toast('A/B · switched to V' + versions.find(v => v.id === other).version_no);
+  };
+  const doDecide = async decision => {
+    if ((decision === 'reject' || decision === 'request_changes') && general.trim() && !screenMsg(general)) {
+      toast('⚠︎ Blocked: remove contact info / links');
+      return;
+    }
+    setBusy(true);
+    try {
+      const body = {
+        submission_id: sub.submission_id,
+        decision
+      };
+      if (general.trim()) body.general_text = general.trim();
+      const j = await rv('decide', body);
+      if (j.blocked) {
+        toast('⚠︎ ' + (j.message || 'Message blocked'));
+      } else {
+        setFlash(decision === 'approve' ? 'rgba(52,199,89,.5)' : decision === 'reject' ? 'rgba(255,59,48,.45)' : 'rgba(255,159,10,.45)');
+        setTimeout(() => setFlash(''), 900);
+        setGeneral('');
+        toast('✓ ' + (decision === 'approve' ? 'Version approved' : decision === 'request_changes' ? 'Changes requested' : 'Version rejected'));
+        await loadThread(sub.submission_id);
+      }
+    } catch (e) {
+      toast('✗ ' + (e.message || 'Error'));
+    }
+    setBusy(false);
+  };
+  const doSend = async () => {
+    const b = msg.trim();
+    if (!b) return;
+    if (!screenMsg(b)) {
+      toast('⚠︎ Blocked: no contact info, links or handles');
+      return;
+    }
+    setBusy(true);
+    try {
+      const j = await rv('sendMessage', {
+        project_id: sub.project_id,
+        submission_id: sub.submission_id,
+        body: b
+      });
+      if (j.blocked) toast('⚠︎ ' + (j.message || 'Message blocked'));else {
+        setMsg('');
+        await loadThread(sub.submission_id);
+      }
+    } catch (e) {
+      toast('✗ ' + (e.message || 'Error'));
+    }
+    setBusy(false);
+  };
+  const readDuration = file => new Promise(res => {
+    try {
+      const a = document.createElement('audio');
+      a.preload = 'metadata';
+      a.onloadedmetadata = () => {
+        const d = a.duration;
+        try {
+          URL.revokeObjectURL(a.src);
+        } catch (_) {}
+        ;
+        res(isFinite(d) ? Math.round(d) : null);
+      };
+      a.onerror = () => res(null);
+      a.src = URL.createObjectURL(file);
+    } catch (_) {
+      res(null);
+    }
+  });
+  const putResumable = (url, file, onProg) => new Promise((res, rej) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', url);
+    xhr.upload.onprogress = e => {
+      if (e.lengthComputable && onProg) onProg(Math.round(e.loaded / e.total * 100));
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          res(JSON.parse(xhr.responseText));
+        } catch (_) {
+          res({});
+        }
+      } else rej(new Error('Upload ' + xhr.status));
+    };
+    xhr.onerror = () => rej(new Error('network'));
+    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+    xhr.send(file);
+  });
+  const doUpload = async file => {
+    if (!file) return;
+    if (!/audio\//.test(file.type || '') && !/\.(mp3|wav|m4a|aac|flac|ogg|aiff?)$/i.test(file.name)) {
+      toast('⚠︎ Please choose an audio file');
+      return;
+    }
+    if (revSummary.trim() && !screenMsg(revSummary)) {
+      toast('⚠︎ Summary blocked: no contact info');
+      return;
+    }
+    setUploadPct(0);
+    try {
+      const duration = await readDuration(file);
+      const start = await rv('startUpload', {
+        submission_id: sub.submission_id,
+        filename: file.name,
+        mime: file.type || 'audio/mpeg'
+      });
+      const df = await putResumable(start.uploadUrl, file, p => setUploadPct(p));
+      await rv('uploadVersion', {
+        submission_id: sub.submission_id,
+        drive_file_id: df.id,
+        mime_type: df.mimeType || file.type || 'audio/mpeg',
+        size_bytes: Number(df.size || file.size) || null,
+        original_filename: file.name,
+        duration_sec: duration,
+        revision_summary: revSummary.trim() || null
+      });
+      setUploadPct(-1);
+      setRevSummary('');
+      toast('✓ New version uploaded');
+      await loadThread(sub.submission_id);
+    } catch (e) {
+      setUploadPct(-1);
+      toast('✗ ' + (e.message || 'Upload failed'));
+    }
+  };
+  if (err === 'signin') return React.createElement("div", {
+    className: "content"
+  }, React.createElement("div", {
+    className: "rs",
+    style: {
+      textAlign: 'center',
+      padding: '60px 20px'
+    }
+  }, React.createElement("div", {
+    style: {
+      maxWidth: 360,
+      margin: '0 auto'
+    }
+  }, React.createElement("div", {
+    style: {
+      width: 56,
+      height: 56,
+      borderRadius: 16,
+      margin: '0 auto 16px',
+      background: 'linear-gradient(135deg,#5e5ce6,#0a84ff)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }
+  }, React.createElement(I.chat, {
+    style: {
+      width: 26,
+      height: 26,
+      color: '#fff'
+    }
+  })), React.createElement("h2", {
+    style: {
+      fontSize: 20,
+      fontWeight: 640
+    }
+  }, "Sign in to review"), React.createElement("p", {
+    style: {
+      color: 'var(--text-2)',
+      fontSize: 14,
+      marginTop: 8,
+      lineHeight: 1.5
+    }
+  }, "The live feedback studio needs your Ideal Music account. Sign out of the demo and sign in with your email to load your projects."))));
+  if (!sub) {
+    return React.createElement("div", {
+      className: "content"
+    }, React.createElement("div", {
+      className: "rs"
+    }, React.createElement("div", {
+      className: "rs-wrap"
+    }, React.createElement("div", {
+      style: {
+        marginBottom: 18
+      }
+    }, React.createElement("h1", {
+      style: {
+        fontSize: 22,
+        fontWeight: 680,
+        letterSpacing: '-.02em'
+      }
+    }, "Feedback"), React.createElement("p", {
+      style: {
+        color: 'var(--text-2)',
+        fontSize: 14,
+        marginTop: 3
+      }
+    }, isClient ? 'Listen to demos and leave feedback for each version.' : isArtist ? 'Upload revisions and track client decisions.' : 'Every review across your projects.')), items === null ? React.createElement("div", {
+      className: "rs-list"
+    }, [0, 1, 2].map(i => React.createElement("div", {
+      key: i,
+      className: "rs-sk",
+      style: {
+        height: 104
+      }
+    }))) : items.length === 0 ? React.createElement("div", {
+      className: "rs-card",
+      style: {
+        textAlign: 'center',
+        padding: '44px 20px'
+      }
+    }, React.createElement("div", {
+      style: {
+        width: 52,
+        height: 52,
+        borderRadius: 15,
+        margin: '0 auto 14px',
+        background: 'var(--sep)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }
+    }, React.createElement(I.folder, {
+      style: {
+        width: 24,
+        height: 24,
+        color: 'var(--text-3)'
+      }
+    })), React.createElement("h5", {
+      style: {
+        fontSize: 15,
+        fontWeight: 600
+      }
+    }, "Nothing to review yet"), React.createElement("p", {
+      style: {
+        color: 'var(--text-3)',
+        fontSize: 13,
+        marginTop: 6,
+        maxWidth: 340,
+        margin: '6px auto 0',
+        lineHeight: 1.5
+      }
+    }, canUpload ? 'When you upload a demo to a project, it will appear here for client review.' : 'When an artist uploads a demo to one of your projects, it will show up here.')) : React.createElement("div", {
+      className: "rs-list"
+    }, items.map(it => React.createElement("button", {
+      key: it.submission_id,
+      className: "rs-subcard",
+      onClick: () => setSub(it)
+    }, React.createElement("div", {
+      className: "rs-sc-top"
+    }, React.createElement("div", {
+      className: "rs-sc-ic"
+    }, React.createElement(I.note, {
+      style: {
+        width: 20,
+        height: 20
+      }
+    })), React.createElement("div", {
+      style: {
+        minWidth: 0,
+        flex: 1
+      }
+    }, React.createElement("h4", null, it.project_title), React.createElement("div", {
+      className: "rs-sc-meta"
+    }, React.createElement("span", {
+      className: "rs-dot",
+      style: {
+        background: STATUS_COLOR[it.status] || 'var(--text-3)'
+      }
+    }), STATUS_LABEL[it.status] || it.status))), React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8
+      }
+    }, React.createElement("span", {
+      className: "rs-vcount"
+    }, React.createElement(I.note, {
+      style: {
+        width: 13,
+        height: 13
+      }
+    }), it.versions_count, " version", it.versions_count === 1 ? '' : 's'), it.approved_version_no ? React.createElement("span", {
+      className: "rs-badge approved"
+    }, "V", it.approved_version_no, " approved") : React.createElement("span", {
+      className: "rs-badge current"
+    }, "V", it.current_version_no || it.versions_count, " current"), React.createElement(I.arrow, {
+      style: {
+        width: 16,
+        height: 16,
+        color: 'var(--text-3)',
+        marginLeft: 'auto'
+      }
+    }))))))));
+  }
+  const statusPill = s => React.createElement("span", {
+    className: "rs-badge",
+    style: {
+      background: (STATUS_COLOR[s] || 'var(--text-3)') + '22',
+      color: STATUS_COLOR[s] || 'var(--text-3)'
+    }
+  }, STATUS_LABEL[s] || s);
+  const railPane = React.createElement("div", {
+    className: "rs-pane rail",
+    style: {
+      display: tab === 'versions' ? 'block' : undefined
+    }
+  }, React.createElement("div", {
+    className: "rs-rail"
+  }, React.createElement("div", {
+    className: "rs-rail-h"
+  }, "Versions"), versions.map(v => {
+    const isCur = subInfo && v.id === subInfo.current_version;
+    const isAppr = subInfo && v.id === subInfo.approved_version;
+    const pc = {
+      ready: 'var(--green)',
+      processing: 'var(--orange)',
+      uploading: 'var(--orange)',
+      syncing: 'var(--orange)',
+      missing: 'var(--red)',
+      permission: 'var(--red)',
+      error: 'var(--red)'
+    }[v.processing_status] || 'var(--text-3)';
+    return React.createElement("button", {
+      key: v.id,
+      className: "rs-vitem" + (v.id === selVer ? " sel" : ""),
+      onClick: () => {
+        setSelVer(v.id);
+        setTab('player');
+      }
+    }, React.createElement("div", {
+      className: "rs-vtop"
+    }, React.createElement("span", {
+      className: "rs-vno"
+    }, "V", v.version_no), isCur && React.createElement("span", {
+      className: "rs-badge current"
+    }, "Current"), isAppr && React.createElement("span", {
+      className: "rs-badge approved"
+    }, "Approved"), React.createElement("span", {
+      style: {
+        marginLeft: 'auto'
+      }
+    }, statusPill(v.decision || (isCur ? subInfo.status : 'submitted')))), v.original_filename && React.createElement("div", {
+      className: "rs-vname"
+    }, v.original_filename), React.createElement("div", {
+      className: "rs-vsub"
+    }, React.createElement("span", {
+      className: "rs-dot",
+      style: {
+        background: pc
+      }
+    }), v.processing_status === 'ready' ? v.duration_sec ? rsTime(v.duration_sec) : 'Audio' : PROC_LABEL[v.processing_status] || v.processing_status, React.createElement("span", null, "·"), rsDate(v.created_at), v.by && React.createElement(React.Fragment, null, React.createElement("span", null, "·"), React.createElement("span", {
+      style: {
+        textTransform: 'capitalize'
+      }
+    }, v.by))), v.last_feedback_at && React.createElement("div", {
+      className: "rs-vsub",
+      style: {
+        color: 'var(--accent-2)'
+      }
+    }, "Feedback ", rsDate(v.last_feedback_at)));
+  })));
+  const playerPane = React.createElement("div", {
+    className: "rs-pane",
+    style: {
+      display: tab === 'player' ? undefined : 'none'
+    }
+  }, React.createElement("div", {
+    className: "rs-main"
+  }, React.createElement("div", {
+    style: {
+      position: 'relative'
+    }
+  }, React.createElement("div", {
+    className: "rs-player",
+    style: {
+      marginBottom: 0
+    }
+  }, React.createElement("div", {
+    className: "rs-pl-head"
+  }, React.createElement("div", {
+    style: {
+      minWidth: 0,
+      flex: 1
+    }
+  }, React.createElement("div", {
+    className: "rs-pl-title"
+  }, "Version ", ver ? ver.version_no : '—', ver && subInfo && ver.id === subInfo.approved_version ? ' · Approved' : ''), ver && ver.original_filename && React.createElement("div", {
+    className: "rs-pl-file"
+  }, ver.original_filename, ver.size_bytes ? ' · ' + rsBytes(ver.size_bytes) : '')), ver && statusPill(ver.decision || (subInfo && ver.id === subInfo.current_version ? subInfo.status : 'submitted')))), ver && (ver.has_audio ? React.createElement("div", {
+    style: {
+      marginTop: -2
+    }
+  }, React.createElement(DriveAudioPlayer, {
+    versionId: ver.id,
+    versionNo: ver.version_no,
+    posRef: posRef,
+    onEnded: () => {}
+  })) : React.createElement("div", {
+    className: "rs-player"
+  }, React.createElement("div", {
+    className: "rs-state"
+  }, React.createElement("div", {
+    className: "rs-spin"
+  }), React.createElement("h5", null, PROC_LABEL[ver.processing_status] || 'Processing audio'), React.createElement("div", {
+    className: "rs-proc-bar"
+  }, React.createElement("i", null)), React.createElement("p", null, "This version is being prepared. It will start playing automatically once Drive finishes.")))), flash && React.createElement("div", {
+    className: "rs-flash go",
+    style: {
+      background: flash
+    }
+  })), ver && React.createElement("div", {
+    className: "rs-player",
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      flexWrap: 'wrap',
+      padding: '14px 18px'
+    }
+  }, React.createElement("div", {
+    style: {
+      fontSize: 12.5,
+      color: 'var(--text-3)'
+    }
+  }, ver.revision_summary ? ver.revision_summary : 'No revision note'), prevVer && React.createElement("button", {
+    className: "btn ghost sm",
+    style: {
+      marginLeft: 'auto'
+    },
+    onClick: () => compareTo(prevVer.id)
+  }, React.createElement(I.back, {
+    style: {
+      width: 14,
+      height: 14
+    }
+  }), "A/B vs V", prevVer.version_no))));
+  const sidePane = React.createElement("div", {
+    className: "rs-pane",
+    style: {
+      display: tab === 'feedback' ? undefined : 'none'
+    }
+  }, React.createElement("div", {
+    className: "rs-side"
+  }, canDecide && ver && React.createElement("div", {
+    className: "rs-card"
+  }, React.createElement("h5", null, "Your decision", React.createElement("span", {
+    className: "rs-vtag"
+  }, "V", ver.version_no)), React.createElement("textarea", {
+    className: "rs-ta",
+    placeholder: "Add feedback for this version… (what to change, what works)",
+    value: general,
+    onChange: e => setGeneral(e.target.value)
+  }), general.trim() && !screenMsg(general) && React.createElement("div", {
+    className: "rs-warn"
+  }, React.createElement(I.x, {
+    style: {
+      width: 13,
+      height: 13,
+      flex: '0 0 13px',
+      marginTop: 1
+    }
+  }), "Remove contact info, links or social handles to send."), React.createElement("div", {
+    className: "rs-decide"
+  }, React.createElement("button", {
+    className: "btn green",
+    disabled: busy,
+    onClick: () => doDecide('approve')
+  }, React.createElement(I.check, {
+    style: {
+      width: 15,
+      height: 15
+    }
+  }), "Approve"), React.createElement("button", {
+    className: "btn",
+    style: {
+      background: 'var(--orange)',
+      boxShadow: '0 4px 14px rgba(255,159,10,.3)'
+    },
+    disabled: busy,
+    onClick: () => doDecide('request_changes')
+  }, "Request changes"), React.createElement("button", {
+    className: "btn red",
+    disabled: busy,
+    onClick: () => doDecide('reject')
+  }, React.createElement(I.x, {
+    style: {
+      width: 15,
+      height: 15
+    }
+  }), "Reject"))), canUpload && React.createElement("div", {
+    className: "rs-card"
+  }, React.createElement("h5", null, "Upload a new version"), React.createElement("input", {
+    type: "text",
+    className: "rs-msg",
+    style: {
+      width: '100%',
+      border: '1px solid var(--sep-strong)',
+      borderRadius: 11,
+      padding: '10px 13px',
+      fontSize: 13,
+      background: 'var(--bg-solid)',
+      color: 'var(--text)',
+      marginBottom: 10
+    },
+    placeholder: "Revision note (optional) — what changed",
+    value: revSummary,
+    onChange: e => setRevSummary(e.target.value)
+  }), React.createElement("input", {
+    ref: fileRef,
+    type: "file",
+    accept: "audio/*,.mp3,.wav,.m4a,.aac,.flac,.aiff",
+    style: {
+      display: 'none'
+    },
+    onChange: e => {
+      const f = e.target.files && e.target.files[0];
+      if (f) doUpload(f);
+      e.target.value = '';
+    }
+  }), uploadPct < 0 ? React.createElement("div", {
+    className: "rs-upload-zone",
+    onClick: () => fileRef.current && fileRef.current.click()
+  }, React.createElement(I.up, {
+    style: {
+      width: 22,
+      height: 22,
+      color: 'var(--accent)'
+    }
+  }), React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 560,
+      marginTop: 6
+    }
+  }, "Choose an audio file"), React.createElement("div", {
+    style: {
+      fontSize: 11.5,
+      color: 'var(--text-3)',
+      marginTop: 2
+    }
+  }, "Saved privately to the project's Drive folder")) : React.createElement("div", null, React.createElement("div", {
+    style: {
+      fontSize: 12.5,
+      color: 'var(--text-2)',
+      marginBottom: 6
+    }
+  }, uploadPct < 100 ? 'Uploading to Google Drive… ' + uploadPct + '%' : 'Finalizing…'), React.createElement("div", {
+    className: "rs-proc-bar",
+    style: {
+      width: '100%',
+      maxWidth: 'none'
+    }
+  }, React.createElement("i", {
+    style: {
+      animation: 'none',
+      left: 0,
+      width: uploadPct + '%',
+      background: 'var(--accent)'
+    }
+  })))), React.createElement("div", {
+    className: "rs-card"
+  }, React.createElement("h5", null, "Feedback", ver ? React.createElement("span", {
+    className: "rs-vtag"
+  }, "V", ver.version_no) : null), verFeedback.length === 0 && verItems.length === 0 && verComments.length === 0 ? React.createElement("p", {
+    style: {
+      fontSize: 12.5,
+      color: 'var(--text-3)'
+    }
+  }, "No feedback on this version yet.") : null, verFeedback.map(f => React.createElement("div", {
+    key: f.id,
+    className: "rs-fb"
+  }, React.createElement("div", {
+    className: "rs-fb-role"
+  }, "Client feedback"), React.createElement("p", null, f.general_text), React.createElement("div", {
+    className: "rs-fb-time"
+  }, rsDate(f.created_at)))), verItems.length > 0 && React.createElement("div", {
+    style: {
+      marginBottom: 8
+    }
+  }, verItems.map(it => React.createElement("div", {
+    key: it.id,
+    style: {
+      display: 'flex',
+      gap: 8,
+      alignItems: 'flex-start',
+      padding: '5px 0',
+      fontSize: 12.5
+    }
+  }, React.createElement("span", {
+    className: "rs-dot",
+    style: {
+      marginTop: 5,
+      background: it.level === 'required' ? 'var(--red)' : it.level === 'optional' ? 'var(--text-3)' : 'var(--orange)'
+    }
+  }), React.createElement("div", null, React.createElement("b", {
+    style: {
+      textTransform: 'capitalize'
+    }
+  }, it.category || 'Note', ": "), it.body)))), verComments.map(c => React.createElement("div", {
+    key: c.id,
+    className: "rs-cmt"
+  }, React.createElement("span", {
+    className: "ts"
+  }, rsTime(c.ts_sec)), React.createElement("p", null, c.body)))), React.createElement("div", {
+    className: "rs-card"
+  }, React.createElement("h5", null, "Messages"), thread && thread.messages.length === 0 ? React.createElement("p", {
+    style: {
+      fontSize: 12.5,
+      color: 'var(--text-3)'
+    }
+  }, "No messages yet.") : null, thread && thread.messages.map(m => React.createElement("div", {
+    key: m.id,
+    style: {
+      padding: '7px 0',
+      borderBottom: '1px solid var(--sep)'
+    }
+  }, React.createElement("div", {
+    style: {
+      fontSize: 11,
+      fontWeight: 640,
+      color: 'var(--text-2)',
+      textTransform: 'capitalize'
+    }
+  }, m.sender_role), React.createElement("p", {
+    style: {
+      fontSize: 12.5,
+      lineHeight: 1.5,
+      marginTop: 2
+    }
+  }, m.body))), React.createElement("div", {
+    className: "rs-msg"
+  }, React.createElement("input", {
+    placeholder: "Message (no contact info)",
+    value: msg,
+    onChange: e => setMsg(e.target.value),
+    onKeyDown: e => {
+      if (e.key === 'Enter') doSend();
+    }
+  }), React.createElement("button", {
+    className: "btn sm",
+    disabled: busy || !msg.trim(),
+    onClick: doSend
+  }, "Send")), msg.trim() && !screenMsg(msg) && React.createElement("div", {
+    className: "rs-warn"
+  }, React.createElement(I.x, {
+    style: {
+      width: 13,
+      height: 13,
+      flex: '0 0 13px',
+      marginTop: 1
+    }
+  }), "Blocked: personal contact details can't be shared."))));
+  return React.createElement("div", {
+    className: "content"
+  }, React.createElement("div", {
+    className: "rs"
+  }, React.createElement("div", {
+    className: "rs-wrap"
+  }, React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      marginBottom: 16,
+      flexWrap: 'wrap'
+    }
+  }, React.createElement("button", {
+    className: "btn ghost sm",
+    onClick: () => {
+      setSub(null);
+      setThread(null);
+    }
+  }, React.createElement(I.back, {
+    style: {
+      width: 15,
+      height: 15
+    }
+  }), "All"), React.createElement("div", {
+    style: {
+      minWidth: 0
+    }
+  }, React.createElement("h1", {
+    style: {
+      fontSize: 19,
+      fontWeight: 680,
+      letterSpacing: '-.02em',
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
+    }
+  }, sub.project_title), React.createElement("div", {
+    style: {
+      fontSize: 12.5,
+      color: 'var(--text-3)',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 7,
+      marginTop: 1
+    }
+  }, subInfo && React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "rs-dot",
+    style: {
+      background: STATUS_COLOR[subInfo.status] || 'var(--text-3)'
+    }
+  }), STATUS_LABEL[subInfo.status] || subInfo.status, React.createElement("span", null, "·"), versions.length, " version", versions.length === 1 ? '' : 's')))), React.createElement("div", {
+    className: "rs-tabbar"
+  }, React.createElement("button", {
+    className: tab === 'versions' ? 'on' : '',
+    onClick: () => setTab('versions')
+  }, "Versions"), React.createElement("button", {
+    className: tab === 'player' ? 'on' : '',
+    onClick: () => setTab('player')
+  }, "Player"), React.createElement("button", {
+    className: tab === 'feedback' ? 'on' : '',
+    onClick: () => setTab('feedback')
+  }, "Feedback")), !thread ? React.createElement("div", {
+    className: "rs-studio"
+  }, React.createElement("div", {
+    className: "rs-sk",
+    style: {
+      height: 320
+    }
+  }), React.createElement("div", {
+    className: "rs-sk",
+    style: {
+      height: 320
+    }
+  })) : React.createElement("div", {
+    className: "rs-studio"
+  }, railPane, playerPane, sidePane))));
+}
 function Shell({
   role,
   setRole,
@@ -8686,10 +10078,11 @@ function Shell({
     setActiveProject(null);
     setNotif(false);
   };
-  const nav = role === 'admin' ? [['dashboard', 'grid', t('nav_dashboard')], ['projects', 'folder', t('nav_projects')], ['requests', 'inbox', t('nav_requests')], ['contracts', 'contract', t('nav_contracts')], ['invoices', 'receipt', t('nav_invoices')], ['payments', 'dollar', t('nav_payments')], ['accounting', 'activity', t('accounting')], ['calendar', 'cal', t('nav_calendar')], ['drive', 'drive', t('nav_drive')], ['users', 'users', t('nav_users')], ['import', 'down', t('importTitle')], ['settings', 'settings', t('nav_settings')]] : role === 'client' ? [['dashboard', 'grid', t('nav_home')], ['projects', 'folder', t('nav_myprojects')], ['requests', 'inbox', t('nav_requests')], ['contracts', 'contract', t('nav_contracts')], ['invoices', 'receipt', t('nav_invoices')], ['drive', 'drive', t('nav_myfiles')], ['settings', 'settings', t('nav_settings')]] : [['dashboard', 'grid', t('nav_home')], ['projects', 'folder', t('nav_assigned')], ['earnings', 'dollar', t('nav_earnings')], ['drive', 'drive', t('nav_files')], ['settings', 'settings', t('nav_settings')]];
+  const nav = role === 'admin' ? [['dashboard', 'grid', t('nav_dashboard')], ['projects', 'folder', t('nav_projects')], ['review', 'chat', 'Feedback'], ['requests', 'inbox', t('nav_requests')], ['contracts', 'contract', t('nav_contracts')], ['invoices', 'receipt', t('nav_invoices')], ['payments', 'dollar', t('nav_payments')], ['accounting', 'activity', t('accounting')], ['calendar', 'cal', t('nav_calendar')], ['drive', 'drive', t('nav_drive')], ['users', 'users', t('nav_users')], ['import', 'down', t('importTitle')], ['settings', 'settings', t('nav_settings')]] : role === 'client' ? [['dashboard', 'grid', t('nav_home')], ['projects', 'folder', t('nav_myprojects')], ['review', 'chat', 'Feedback'], ['requests', 'inbox', t('nav_requests')], ['contracts', 'contract', t('nav_contracts')], ['invoices', 'receipt', t('nav_invoices')], ['drive', 'drive', t('nav_myfiles')], ['settings', 'settings', t('nav_settings')]] : [['dashboard', 'grid', t('nav_home')], ['projects', 'folder', t('nav_assigned')], ['review', 'chat', 'Feedback'], ['earnings', 'dollar', t('nav_earnings')], ['drive', 'drive', t('nav_files')], ['settings', 'settings', t('nav_settings')]];
   const titles = {
     dashboard: role === 'admin' ? t('nav_dashboard') : t('nav_home'),
     projects: role === 'client' ? t('nav_myprojects') : role === 'artist' ? t('nav_assigned') : t('nav_projects'),
+    review: 'Feedback',
     requests: t('requestsTitle'),
     contracts: t('contractsTitle'),
     invoices: t('invoicesTitle'),
@@ -8892,6 +10285,9 @@ function Shell({
   }), page === 'projects' && React.createElement(Projects, {
     role: role,
     go: go
+  }), page === 'review' && React.createElement(ReviewStudio, {
+    role: role,
+    toast: toast
   }), page === 'project' && activeProject && React.createElement(ProjectDetail, {
     p: activeProject,
     role: role,

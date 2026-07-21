@@ -415,7 +415,60 @@ function Login({onPick,lang,setLang}){
 }
 
 /* ===== DASHBOARD ===== */
+const RS_NEEDS=['new_version','submitted','in_review','pending','draft'];
+function ClientHome({name,go}){
+  const{t}=useT();
+  const [items,setItems]=useState(null);
+  useEffect(()=>{ (async()=>{ try{ const j=await rv('listMine'); setItems(j.items||[]); }catch(e){ setItems([]); } })(); },[]);
+  const outAmt=INVOICES.filter(i=>i.clientName==='Lunar Records').reduce((a,i)=>a+(i.items.reduce((x,it)=>x+it.qty*it.rate,0)-i.paid),0);
+  const all=items||[];
+  const needs=all.filter(it=>RS_NEEDS.indexOf(it.status)>=0);
+  const projMap={}; all.forEach(it=>{ const k=it.project_id; if(!projMap[k])projMap[k]={id:k,title:it.project_title,items:[]}; projMap[k].items.push(it); });
+  const projects=Object.keys(projMap).map(k=>projMap[k]);
+  const openReview=(it)=>go('review',it);
+  const sk=(i)=><div key={i} className="rs-sk" style={{height:56,marginTop:9,borderRadius:12}}/>;
+  const emptyBox=(icon,title,sub)=><div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'34px 12px',textAlign:'center'}}>{icon}<div style={{fontSize:13.5,fontWeight:600,marginTop:10}}>{title}</div><div style={{fontSize:12.5,color:'var(--text-3)',marginTop:2,maxWidth:220,lineHeight:1.45}}>{sub}</div></div>;
+  const header=(title,count,onView)=><div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4,minHeight:30}}>
+    <b style={{fontSize:16,letterSpacing:'-.01em'}}>{title}{count!=null&&<span style={{fontSize:13.5,color:'var(--text-3)',fontWeight:500,marginLeft:8}}>{count}</span>}</b>
+    {onView&&<button className="btn ghost sm" onClick={onView}>{t('viewAll')}</button>}</div>;
+  const row=(key,grad,icon,titleTx,subTx,right,onClick,idx)=><button key={key} onClick={onClick} style={{display:'flex',alignItems:'center',gap:13,padding:'12px 8px',borderTop:idx?'1px solid var(--sep)':'none',width:'100%',textAlign:'left',borderRadius:10,transition:'background .15s'}} onMouseEnter={e=>e.currentTarget.style.background='var(--sep)'} onMouseLeave={e=>e.currentTarget.style.background=''}>
+    <div style={{width:42,height:42,borderRadius:11,background:grad,flex:'0 0 42px',display:'flex',alignItems:'center',justifyContent:'center'}}>{icon}</div>
+    <div style={{flex:1,minWidth:0}}><div style={{fontWeight:600,fontSize:14.5,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{titleTx}</div><div style={{fontSize:12.5,color:'var(--text-3)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{subTx}</div></div>
+    {right}</button>;
+  return <div className="view content narrow">
+    <div className="h-row"><div>
+      <h1>{t('goodAfternoon')}, {name}</h1>
+      <p>The latest across all your projects — always up to date, in one place.</p>
+    </div></div>
+    {outAmt>0&&<button className="card solid" onClick={()=>go('invoices')} style={{display:'flex',alignItems:'center',gap:14,padding:'15px 20px',marginBottom:16,width:'100%',textAlign:'left',border:'1px solid rgba(255,159,10,.35)',background:'linear-gradient(90deg,rgba(255,159,10,.09),transparent 70%)'}}>
+      <span style={{width:44,height:44,borderRadius:12,background:'rgba(255,159,10,.16)',color:'var(--orange)',display:'flex',alignItems:'center',justifyContent:'center',flex:'0 0 44px'}}><I.receipt style={{width:20,height:20}}/></span>
+      <div style={{flex:1}}><div style={{fontSize:12,color:'var(--text-3)',fontWeight:560,textTransform:'uppercase',letterSpacing:'.03em'}}>Outstanding balance</div><div style={{fontSize:22,fontWeight:680,letterSpacing:'-.02em'}}>{fmt(outAmt)}</div></div>
+      <span className="btn sm" style={{background:'var(--orange)',boxShadow:'0 4px 14px rgba(255,159,10,.3)'}}>View invoices</span></button>}
+    <div className="grid" style={{gridTemplateColumns:'1fr 1fr',gap:16,alignItems:'stretch'}}>
+      <div className="card solid view" style={{padding:'18px 20px',display:'flex',flexDirection:'column'}}>
+        {header(t('nav_myprojects'),items?projects.length:null,()=>go('projects'))}
+        {items===null?[0,1,2].map(sk)
+        :projects.length===0?emptyBox(<I.folder style={{width:26,height:26,color:'var(--text-3)'}}/>,'No projects yet','New projects will appear here as soon as they start.')
+        :<div className="stagger" style={{flex:1}}>{projects.map((p,i)=>{ const pn=p.items.filter(x=>RS_NEEDS.indexOf(x.status)>=0).length;
+          return row(p.id,gradients[i%6],<I.note style={{width:18,height:18,color:'#fff'}}/>,p.title,p.items.length+' '+(p.items.length===1?'song':'songs'),pn>0?<span className="rs-badge" style={{background:'rgba(255,159,10,.16)',color:'var(--orange)'}}>{pn} to review</span>:<I.check style={{width:17,height:17,color:'var(--green)'}}/>,()=>openReview(p.items[0]),i); })}</div>}
+      </div>
+      <div className="card solid view" style={{padding:'18px 20px',display:'flex',flexDirection:'column'}}>
+        {header('Needs your review',items?needs.length:null,null)}
+        {items===null?[0,1,2].map(sk)
+        :needs.length===0?emptyBox(<div style={{width:44,height:44,borderRadius:'50%',background:'rgba(52,199,89,.14)',display:'flex',alignItems:'center',justifyContent:'center'}}><I.check style={{width:22,height:22,color:'var(--green)'}}/></div>,"You're all caught up",'No demos are waiting for your review.')
+        :<div className="stagger" style={{flex:1}}>{needs.map((it,i)=>row(it.submission_id,'linear-gradient(135deg,rgba(255,159,10,.92),rgba(255,59,48,.85))',<I.play style={{width:16,height:16,color:'#fff',marginLeft:2}}/>,it.project_title,(it.current_filename||('Version '+it.current_version_no))+' · '+rsDate(it.current_submitted_at),<I.arrow style={{width:16,height:16,color:'var(--text-3)',flex:'0 0 16px'}}/>,()=>openReview(it),i))}</div>}
+      </div>
+    </div>
+    <div className="card solid" style={{padding:'18px 20px',marginTop:16}}>
+      <b style={{fontSize:15,display:'flex',alignItems:'center',gap:8}}><I.activity style={{width:16,height:16,color:'var(--accent-2)'}}/>{t('activityCenter')}</b>
+      <div style={{marginTop:6}}>{ACTIVITY.slice(0,3).map((a,i)=><div key={i} style={{display:'flex',gap:11,padding:'10px 0',borderTop:i?'1px solid var(--sep)':'none'}}>
+        <span style={{width:30,height:30,borderRadius:9,background:a.color+'22',color:a.color,display:'flex',alignItems:'center',justifyContent:'center',flex:'0 0 30px'}}>{I[a.icon]({style:{width:15,height:15}})}</span>
+        <div><div style={{fontSize:13,lineHeight:1.35}}>{a.text}</div><div style={{fontSize:11.5,color:'var(--text-3)',marginTop:2}}>{a.time}</div></div></div>)}</div>
+    </div>
+  </div>;
+}
 function Dashboard({role,go,name}){
+  if(role==='client')return <ClientHome name={name} go={go}/>;
   const{t}=useT();const visible=myProjects(role);
   const outstanding=INVOICES.reduce((a,i)=>a+(i.items.reduce((x,it)=>x+it.qty*it.rate,0)-i.paid),0);
   const toPay=PAYOUTS.filter(p=>p.status!=='paid').reduce((a,p)=>a+p.amount,0);
@@ -1423,7 +1476,7 @@ function DownloadPopup({submissionId,title,close,toast}){
   </div></div>;
 }
 
-function ReviewStudio({role,toast}){
+function ReviewStudio({role,toast,initialSub}){
   const isClient=role==='client', isArtist=role==='artist', isStaff=role==='admin'||role==='superadmin';
   const canDecide=isClient||isStaff, canUpload=isArtist||isStaff;
   const [items,setItems]=useState(null);
@@ -1448,6 +1501,7 @@ function ReviewStudio({role,toast}){
   const loadList=async()=>{ setErr(''); try{ const j=await rv('listMine'); setItems(j.items||[]); }catch(e){ setErr(e.status===401?'signin':(e.message||'error')); setItems([]); } };
   const loadThread=async(sid)=>{ try{ const j=await rv('listThread',{submission_id:sid}); setThread(j); const cur=j.submission&&j.submission.current_version; setSelVer(cur||(j.versions.length?j.versions[j.versions.length-1].id:null)); }catch(e){ toast('✗ '+(e.message||'Error')); } };
   useEffect(()=>{ loadList(); },[]);
+  useEffect(()=>{ if(initialSub&&initialSub.submission_id) setSub(initialSub); },[initialSub]);
   useEffect(()=>{ if(sub){ setThread(null); loadThread(sub.submission_id); } },[sub]);
 
   const versions=thread?thread.versions:[];
@@ -1584,11 +1638,11 @@ function ReviewStudio({role,toast}){
 
 function Shell({role,setRole,isSuper,lang,setLang,theme,setTheme}){
   const{t}=useT();
-  const[page,setPage]=useState('dashboard');const[activeProject,setActiveProject]=useState(null);
+  const[page,setPage]=useState('dashboard');const[activeProject,setActiveProject]=useState(null);const[reviewSub,setReviewSub]=useState(null);
   const[cmdk,setCmdk]=useState(false);const[notif,setNotif]=useState(false);const[newP,setNewP]=useState(false);const[toastMsg,setToastMsg]=useState(null);const[mnav,setMnav]=useState(false);
   const toast=(m)=>{setToastMsg(m);setTimeout(()=>setToastMsg(null),2600);};
   useEffect(()=>{const h=(e)=>{if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();setCmdk(v=>!v);}if(e.key==='Escape'){setCmdk(false);setNotif(false);setNewP(false);}};window.addEventListener('keydown',h);return()=>window.removeEventListener('keydown',h);},[]);
-  const go=(p,proj)=>{setMnav(false);if(p==='new'){setNewP(true);return;}if(p==='project'){setActiveProject(proj);setPage('project');return;}setPage(p);setActiveProject(null);setNotif(false);};
+  const go=(p,proj)=>{setMnav(false);if(p==='new'){setNewP(true);return;}if(p==='project'){setActiveProject(proj);setPage('project');return;}if(p==='review'){setReviewSub(proj?Object.assign({},proj,{_k:Date.now()}):null);setPage('review');setActiveProject(null);setNotif(false);return;}setPage(p);setActiveProject(null);setNotif(false);};
   const nav=role==='admin'
     ?[['dashboard','grid',t('nav_dashboard')],['projects','folder',t('nav_projects')],['review','chat','Feedback'],['requests','inbox',t('nav_requests')],['contracts','contract',t('nav_contracts')],['invoices','receipt',t('nav_invoices')],['payments','dollar',t('nav_payments')],['accounting','activity',t('accounting')],['calendar','cal',t('nav_calendar')],['drive','drive',t('nav_drive')],['users','users',t('nav_users')],['import','down',t('importTitle')],['settings','settings',t('nav_settings')]]
     :role==='client'
@@ -1618,7 +1672,7 @@ function Shell({role,setRole,isSuper,lang,setLang,theme,setTheme}){
       </header>
       {page==='dashboard'&&<Dashboard role={role} go={go} name={prof.name}/>}
       {page==='projects'&&<Projects role={role} go={go} toast={toast}/>}
-      {page==='review'&&<ReviewStudio role={role} toast={toast}/>}
+      {page==='review'&&<ReviewStudio role={role} toast={toast} initialSub={reviewSub}/>}
       {page==='project'&&activeProject&&<ProjectDetail p={activeProject} role={role} go={go} toast={toast}/>}
       {page==='requests'&&<Requests role={role} toast={toast}/>}
       {page==='contracts'&&<Contracts role={role} toast={toast}/>}

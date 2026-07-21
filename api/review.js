@@ -380,15 +380,16 @@ export default async function handler(req, res) {
       const subs = await db(`submissions?project_id=in.(${pIds.join(',')})&select=id,project_id,status,current_version,approved_version,updated_at&order=updated_at.desc&limit=300`);
       const sIds = (subs || []).map((x) => x.id);
       let vers = [];
-      if (sIds.length) vers = await db(`submission_versions?submission_id=in.(${sIds.join(',')})&select=id,submission_id,version_no,processing_status,created_at`);
+      if (sIds.length) vers = await db(`submission_versions?submission_id=in.(${sIds.join(',')})&select=id,submission_id,version_no,processing_status,original_filename,created_at`);
       const items = (subs || []).map((sub) => {
         const vs = vers.filter((v) => v.submission_id === sub.id);
-        const cur = vs.find((v) => v.id === sub.current_version);
+        const cur = vs.find((v) => v.id === sub.current_version) || vs.slice().sort((a, b) => b.version_no - a.version_no)[0];
         const appr = vs.find((v) => v.id === sub.approved_version);
         const proj = pById[sub.project_id] || {};
         return { submission_id: sub.id, project_id: sub.project_id, project_title: proj.title || 'Project',
           role: coarseRole(me.id, proj), status: sub.status, versions_count: vs.length,
           current_version_no: cur ? cur.version_no : (vs.length ? Math.max.apply(null, vs.map((v) => v.version_no)) : 0),
+          current_filename: (cur && cur.original_filename) || null, current_submitted_at: (cur && cur.created_at) || sub.updated_at,
           approved_version_no: appr ? appr.version_no : null, updated_at: sub.updated_at };
       });
       return res.status(200).json({ ok: true, items });
